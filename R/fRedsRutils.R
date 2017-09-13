@@ -147,7 +147,7 @@ set.Arial <- function(afmPATH="~/Dropbox"){
 # #' @param fitRange    Vector of length 2 with range of frequencies to perform log-log fit.
 # #' @param plot    Plot the log-log spectrum and slope.
 # #'
-# #' @return
+#
 # #' @export
 # #'
 # #' @examples
@@ -192,7 +192,6 @@ set.Arial <- function(afmPATH="~/Dropbox"){
 #'
 #' @author Fred Hasselman
 #'
-#' @return
 #' @export
 #'
 #' @examples
@@ -321,7 +320,7 @@ try.CATCH <- function(expr){
 #' @param x If \code{x} is any of \code{Inf,-Inf,NA,NaN,NULL,length(x)==0}, it will return \code{y}; otherwise it returns \code{x}.
 #' @param y The value to return in case of catastrophy \code{>!<}
 #'
-#' @return
+
 #' @export
 #' @author Fred Hasselman
 #' @description When your functions wear these rose tinted glasses, the world will appear to be a nicer, fluffier place.

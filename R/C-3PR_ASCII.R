@@ -30,10 +30,7 @@ init <- function(){
 #'
 #' @description Displays easy-to-spot text in the Console.
 #'
-#' @return
 #' @export
-#'
-#' @examples
 disp <- function(message='Hello world!', header = "disp", footer = TRUE){
 
   ps <- "# "
@@ -93,7 +90,6 @@ disp <- function(message='Hello world!', header = "disp", footer = TRUE){
 #'
 #' @seealso vioQtile
 #'
-#' @examples
 fill_viol<-function(gr.df,gr,qtile,probs){
   #     require(ggplot2)
   #     require(dplyr)
@@ -135,10 +131,8 @@ fill_viol<-function(gr.df,gr,qtile,probs){
 #'  Deal with original data
 #'  More input, more output
 #'
-#' @return
 #' @export
 #'
-#' @examples
 vioQtile <- function(gg=NULL,qtiles=NULL,probs=seq(0,1,.25),labels=paste(probs[-1]*100),withData=FALSE){
   #  require(ggplot2)
 
@@ -302,10 +296,8 @@ clean.ML2fieldsNA <- function(source.raw, pattern="(test|-99)", S1 = TRUE, ps = 
 #'
 #' @param inf Internal
 #'
-#' @return
 #' @export
 #'
-#' @examples
 get.chain <- function(inf){
   # Build a filter chain
 
@@ -329,10 +321,8 @@ get.chain <- function(inf){
 #' @param study.vars.labels Internal
 #' @param stat.params Internal
 #'
-#' @return
 #' @export
 #'
-#' @examples
 get.cases <- function(rule,study.vars,study.vars.labels,stat.params){
   #rule <- cases.include
   type  <-names(rule)
@@ -413,10 +403,10 @@ get.cases <- function(rule,study.vars,study.vars.labels,stat.params){
 #' @param keytable Internal
 #' @param cols Internal
 #'
-#' @return
+
 #' @export
 #'
-#' @examples
+
 get.info <- function(keytable,cols, subset){
   # Read Variables and Parameters from:
   #keytable <- ML2.key[s,]
@@ -452,7 +442,7 @@ get.info <- function(keytable,cols, subset){
 #' @return A list with fields \code{study.vars} (data organised according to the \code{masteRkey} spreadsheet), \code{study.vars/labels}, \code{N}, and \code{RawDataFilter}(raw data, unfiltered).
 #' @export
 #'
-#' @examples
+
 get.sourceData <- function(ML2.id,ML2.df,ML2.in){
   N       <- numeric(length(ML2.in$study.vars))
   #study.vars[1]    <- unlist(ML2.in$study.vars)
@@ -544,7 +534,7 @@ get.sourceData <- function(ML2.id,ML2.df,ML2.in){
 #' @return The effect sizes calculated by \code{compute.es} corresponding to the test statistic(s), with either meta-analytic, or, exact CI.
 #' @export
 #'
-#' @examples
+
 any2any <- function(testInfo,
                     df1 = NULL,
                     df2 = NULL,
@@ -786,10 +776,10 @@ any2any <- function(testInfo,
 #' @param alternative    Alternative hypothesis (defult = "two").
 #'
 #'
-#' @return
+
 #' @export
 #'
-#' @examples
+
 get.ncpCI <- function(x, df1, df2, N, esType, CL=.95, keepSign = TRUE, keepDirection = TRUE, alternative = "two.sided"){
   #require(MBESS)
   esType <- gsub("lm.","",esType)
@@ -858,10 +848,10 @@ get.ncpCI <- function(x, df1, df2, N, esType, CL=.95, keepSign = TRUE, keepDirec
 #'
 #'
 #'
-#' @return
+
 #' @export
 #'
-#' @examples
+
 cor.test.fisherZ <- function(r1 = NULL,
                              r2 = NULL,
                              n1 = NULL,
@@ -1182,10 +1172,10 @@ z.test <- function(x = 0, mu = 0, pi = NULL, N = 0, sigma = 1, proportion=FALSE,
 # #'
 # #' @param df  A data frame.
 # #'
-# #' @return
+#
 # #' @export
 # #'
-# #' @examples
+#
 # get.SwarmPlot <- function(df){
 #
 # df<-outlist1
