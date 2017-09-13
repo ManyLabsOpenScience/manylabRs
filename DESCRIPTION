@@ -1,0 +1,16 @@
+Package: manylabRs
+Type: Package
+Version: 0.1.0
+Title: Analysis scripts and data from the Many Labs projects
+Date: 2017-09-12
+Authors@R: c(person("Fred", "Hasselman", email = "me@fredhasselman.com", role = c("aut", "cre", "pdr")),
+            person("Rick", "Klein", email = "", role = c("ctb", "pdr")),
+            person("Michelangelo", "Vianello", email = "", role = c("ctb", "pdr")),
+            person("Brian", "Nosek", email = "", role = c("ctb", "pdr")))
+Maintainer: Fred Hasselman <me@fredhasselman.com>
+Description: Code and data from the ManyLabs projects. ML1: Investigating Variation in Replicability (https://osf.io/wx7ck/); ML2: Investigating Variation in Replicability Across Sample and Setting (https://osf.io/8cd4r/).
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    tidyverse
