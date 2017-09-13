@@ -559,16 +559,7 @@ get.GoogleSheet <- function(url=NULL,data=c('ML1data','ML2masteRkey','ML2data')[
 #' }
 #' @export
 #'
-#' @examples
-#' #Get the RP:P data hosted on OSF.
-#' dfRPP <- get.OSFfile(code='https://osf.io/fgjvw/', dfCln=TRUE)$df
 get.OSFfile <- function(code, dir = tempdir(), scanMethod, downloadMethod = c("httr","downloader","curl"), dataSet = TRUE, dfCln = FALSE){
-  # require(bitops)
-  # require(RCurl)
-  # require(downloader)
-  # require(httr)
-  # require(rio)
-  # require(dplyr)
 
   # Check if input is code:
   if (!grepl("osf\\.io",code)){
