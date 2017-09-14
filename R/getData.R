@@ -80,9 +80,6 @@ get.analyses <- function(studies       = NA,
       ML2.df <- ML2.S2
     }
 
-    # WEIRD <- ML2.df$Country%in%c("Australia","Austria","Canada","France","Germany","Hungary","Italy","New Zealand","Poland","Portugal","Serbia","Spain","Sweden", "The Netherlands","UK","USA")
-    #
-
     # Add a unique ID
     ML2.df$uID = seq(1, nrow(ML2.df))
 
@@ -97,15 +94,6 @@ get.analyses <- function(studies       = NA,
 
     # Apply the df chain to select relevant subset of variables
     ML2.df <- eval(parse(text=paste("ML2.df", ML2.id$df)))
-
-
-    # if(!subset%in%"all"){
-    #   if(subset%in%"WEIRD"){
-    #     ML2.df <- ML2.df[ML2.df$Weird==1,]
-    #   } else {
-    #     ML2.df <- ML2.df[ML2.df$Weird==0,]
-    #   }
-    # }
 
 
   if(NROW(ML2.df)>0){
@@ -312,13 +300,6 @@ get.analyses <- function(studies       = NA,
               # colnames(SourceInfo) <- c("name","name.Global",colnames(SourceInfoTable)[3:NCOL(SourceInfoTable)])
               }
             } else {
-              # SourceInfo   <- t(ldply(1:NCOL(SourceInfoTable), function(c){
-              #   tbl_df(data.frame(src = paste(unlist(unique(SourceInfoTable[sID,c]),use.names = FALSE),collapse ="\n")))
-              # }))
-              #
-            # colnames(SourceInfo) <- c("name","name.GLobal",colnames(SourceInfoTable)[3:NCOL(SourceInfoTable)])
-            # rownames(SourceInfo) <- NULL
-              #}))
 
             SourceInfo <- raw.df[[g]] %>% filter(case.include) %>%
               summarise(

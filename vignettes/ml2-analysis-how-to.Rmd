@@ -63,14 +63,15 @@ install_github("ManyLabsOpenScience/manylabRs")
 
 ### Download tarball from GitHub
 
-First [download the tarball](https://github.com/ManyLabsOpenScience/manylabRs/pkg/), then install the package locally through the RStudio package installer: `Tools` >> `Instal Packages...`
+First [download the tarball](https://github.com/ManyLabsOpenScience/manylabRs/pkg/), then install the package locally through the RStudio package installer: `Tools` >> `Install Packages...`
+
 
 ## Main function
 
 The main function to inspect is `get.analyses()`.  
 
-+ It will take an analysis number (`studies`) from the `masteRkey` sheet and an indication of whether the analysis is `global`, `primary`, `secondary`. 
-+ Have a look at [`saveConsole.R`](https://raw.githubusercontent.com/ManyLabsOpenScience/manylabRs/master/R/saveConsole.R) and the `testScript()` function. This will create a log file of the output.
++ It will take an analysis number (`studies`) from the `masteRkey` sheet and an indication of whether the analysis is `global` [1], `primary` [2], `secondary` [3], or `order` [4].
++ Have a look at [`saveConsole.R`](https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/saveConsole.R) and the `testScript()` function. This will create a log file of the output.
 **Note:** These scripts assume you are on a Mac and you copied the dropbox folder to your harddrive.
 
 ### Main algorithm
