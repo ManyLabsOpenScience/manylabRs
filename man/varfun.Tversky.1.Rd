@@ -20,8 +20,6 @@ Dataset ready for analysis
 tver1.1=choice ($250 wall hanging condition, yes=1, no=2);
 tver2.1=choice ($30 wall hanging cond, yes=1, no=2).
 
-Materials and procedure. Participants will receive one of two scenarios from the original with dollar amounts approximately adjusted for inflation and the consumer items being replaced with a ceramic vase and a wall hanging.
-
 tver1.1 Imagine that you are about to purchase a ceramic vase for $30, and a wall hanging for $250. The salesman informs you that the wall hanging you wish to buy is on sale for $240 at the other branch of the store, located 20 minutes drive away. Would you make the trip to the other store?
 m  Yes, I would go to the other branch. (1)
 m  No, I would not go to the other branch. (2)

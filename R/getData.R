@@ -12,7 +12,7 @@
 #'
 #' @details Run analyses for (selected) ML2 studies.
 #'
-
+#' @examples
 get.analyses <- function(studies       = NA,
                          analysis.type = NA,
                          Nmin.raw  = 30,
@@ -193,7 +193,7 @@ get.analyses <- function(studies       = NA,
           }}
 
         # Run the analysis according to ML2.key: 'stat.test'
-        stat.params <- ML2.in$stat.params
+        stat.params <<- ML2.in$stat.params
         stat.test   <- try.CATCH(with(ML2.var[[g]],eval(parse(text = ML2.key$stat.test[[s]]))))
 
         # if(grepl("approximation", stat.test$warning)){stat.test$warning <- NULL}
@@ -505,7 +505,7 @@ get.analyses <- function(studies       = NA,
 #' }
 #' @export
 #'
-
+#' @examples
 get.GoogleSheet <- function(url=NULL,data=c('ML1data','ML2masteRkey','ML2data')[2],dfCln=FALSE,Sep = "."){
   if(is.null(url)){
     switch(data,
@@ -559,7 +559,16 @@ get.GoogleSheet <- function(url=NULL,data=c('ML1data','ML2masteRkey','ML2data')[
 #' }
 #' @export
 #'
+#' @examples
+#' #Get the RP:P data hosted on OSF.
+#' dfRPP <- get.OSFfile(code='https://osf.io/fgjvw/', dfCln=TRUE)$df
 get.OSFfile <- function(code, dir = tempdir(), scanMethod, downloadMethod = c("httr","downloader","curl"), dataSet = TRUE, dfCln = FALSE){
+  # require(bitops)
+  # require(RCurl)
+  # require(downloader)
+  # require(httr)
+  # require(rio)
+  # require(dplyr)
 
   # Check if input is code:
   if (!grepl("osf\\.io",code)){
@@ -627,10 +636,10 @@ get.OSFfile <- function(code, dir = tempdir(), scanMethod, downloadMethod = c("h
 #' @param files    A list of \code{.csv} / \code{.xlsx} files containing raw ML2 data.
 #' @param finishedOnly    Only import cases with value of variable \code{Finished = 1} (default).
 #'
-
+#' @return
 #' @export
 #'
-
+#' @examples
 get.CSVdata <- function(path, fID, finishedOnly=TRUE){
   files <- paste0(path,"/",fID)
 
@@ -668,7 +677,7 @@ get.CSVdata <- function(path, fID, finishedOnly=TRUE){
 #' \item \code{Problems}: Cases for which the study order information could not be retrieved.
 #' }
 #'
-
+#' @examples
 get.Order <- function(df, S1=TRUE){
   #   require(plyr)
   ifelse(S1,{
@@ -756,7 +765,7 @@ get.Order <- function(df, S1=TRUE){
 #'
 #' @family "get." functions
 #'
-
+#' @examples
 get.zavCode <- function(df = NULL, lookup = NULL){
   # Generate variable names.
   varsCOLD <- paste0("zav1.",1:13)
@@ -935,10 +944,10 @@ get.packageData <- function(){
 #' @param tp      Analysis type (1 = 'study.global.include', 2 = 'study.primary.include', 3 = 'study.secondary.include').
 #' @param saveRDSfile     Save an RDS file of the output.
 #'
-
+#' @return
 #' @export
 #'
-
+#' @examples
 testScript <- function(studies,
                        tp,
                        saveCSVfile=NA,
@@ -1182,10 +1191,10 @@ decide.analysis <- function(ML2.key, studies=NA, tp = NA){
 #'
 #' @param data Dataframe with ML2 testresutls and ESCI output.
 #'
-
+#' @return
 #' @export
 #'
-
+#' @examples
 get.plotly <- function(data,analysis_url){
 
   p <- plot_ly(data,
@@ -1215,10 +1224,10 @@ get.plotly <- function(data,analysis_url){
 #'
 #' @param pageID
 #'
-
+#' @return
 #' @export
 #'
-
+#' @examples
 renderHTMLresults <- function(pageID) {
   rmarkdown::render(input  = "ML2_interactive_results.Rmd",
                     params = list(

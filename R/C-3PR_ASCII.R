@@ -1,7 +1,7 @@
 init <- function(){
 
-  srcDir <- "~/Documents/GitHub/manylabRs/R/"
-  source(paste0(srcDir,"C-3PR_ASCII.R"))
+  srcDir <- "~/Documents/GitHub/manylabRs/manylabRs/R/"
+  #source(paste0(srcDir,"C-3PR_ASCII.R"))
   source(paste0(srcDir,'getData.R'))
   source(paste0(srcDir,'inIT.R'))
   source(paste0(srcDir,'ML2_variable_functions.R'))

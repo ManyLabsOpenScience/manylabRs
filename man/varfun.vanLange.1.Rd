@@ -13,8 +13,6 @@ varfun.vanLange.1(vars)
 Dataset ready for analysis A \code{list} object containing fields \strong{SVO}, \strong{Siblings} and \strong{N}
 }
 \description{
-\url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#vanlange}
-
 \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#10_van_lange}
 }
 \section{Variables}{

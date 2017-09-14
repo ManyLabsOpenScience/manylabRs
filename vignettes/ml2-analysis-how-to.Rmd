@@ -1,0 +1,90 @@
+---
+title: "ManyLabs2 Data Cleaning"
+author: "[ManyLabs2](https://osf.io/8cd4r) (Corresponding coder: [Fred Hasselman](https://osf.io/ujgs6/))"
+date: "24 October 2015"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+# Analysis Strategy
+
+The ManyLabs2 data analysis strategy attempts to regard three principles that maximize research transparency:
+  
+ 1. **Principle of Equality**: All data should be treated equally by a code. That is, the code should do its job generating results while at the same time being as naive as possible to the particular facts of the study being analysed. This will reduce any chances of bias with respect to the outcomes of a certain dataset or a particular study. If it is necessary to add study specific code, the second principle should be regarded.
+ 
+ 2. **Principle of Transparency**: All operations that are crucial for obtaining an analysis result should be available for inspection by anyone who wishes to do so. This should be possible without the help of the auhtors that generated the code. The operations concern the application of data filtering rules, computation of variables derived from original measurements, running an analysis and constructing graphs, tables and figures. If full transparency is not possible, the third principle should be regarded. 
+ 
+ 3. **Principle of Reproducibility**: The most basic requirement for analysis results is that they should be reproducable given the original code and the original data set. However, any new implementation of the same analysis strategy in a different context, or application of the code to a different dataset, e.g. a replication study, should not be problematic. That is, outcomes may differ between data sets, but this should not be attributable to any details of the code or the analysis strategy.  
+    
+    
+## `R` as a parser of online code.    
+
+The [pre-registered Manylabs2 protocol](https://docs.google.com/document/d/1B5sVz3jlKMGnpxik-cfCeR8ngeQ249bzQExaVd5FzZM/edit) describes a number of analyses per replication study that can be categorised as **Primary** (target replications per site), **Secondary** (additional analyses per site, e.g. on subgroups), and **Global** (analyses on the entire dataset). 
+
+These *promised analyses* have all been implemented in `R` in a transparent way and this implementation is now ready for an independent review.    
+
+## Implementation
+
+Functions avalaible in an [`R` package on GitHub](https://github.com/ManyLabsOpenScience/manylabRs) ([PDF manual](https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/manylabRs.pdf)) extract information and instructions about each promised analysis a table that is openly accessible, the [masteRkey spreadsheet](https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/edit#gid=769239110).
+
+Each row in the table represents an analysis, the columns contain specific information about the analysis:   
+
+* Columns A through E are identifiers for study, analysis and slate.
+
+* Column F and G contain `R` commands which will extract and label the columnms from the dataset needed for the analysis.
+
+* Column H and I contain filter instructions for cases and subsamnples.
+
+* Columns J through L contain information about the nature of the analysis (Global, Primary Secondary).
+
+* Column M lists the name of a analysis specific *variable function* (`varfun.`) which in most cases just reorganises the variables specified in previous columns so they can be passed to the analysis code. In some cases these function perform specific calculations required by the original analyses.
+
+* Columns N through S contain information about the statistiscal tests 
+
+There's an `R` package which contains all the `R` code, including the datafiles.
+
+
+## Install the package
+
+Several ways to install the package.
+
+### Source from GitHub
+
+Use the code below to install the `manylabRs` package directly from [GitHub](https://github.com/ManyLabsOpenScience/manylabRs).
+
+```{r, eval=FALSE}
+library(devtools)
+install_github("ManyLabsOpenScience/manylabRs")
+```
+
+### Download tarball from GitHub
+
+First [download the tarball](https://github.com/ManyLabsOpenScience/manylabRs/pkg/), then install the package locally through the RStudio package installer: `Tools` >> `Instal Packages...`
+
+## Main function
+
+The main function to inspect is `get.analyses()`.  
+
++ It will take an analysis number (`studies`) from the `masteRkey` sheet and an indication of whether the analysis is `global`, `primary`, `secondary`. 
++ Have a look at [`saveConsole.R`](https://raw.githubusercontent.com/ManyLabsOpenScience/manylabRs/master/R/saveConsole.R) and the `testScript()` function. This will create a log file of the output.
+**Note:** These scripts assume you are on a Mac and you copied the dropbox folder to your harddrive.
+
+### Main algorithm
+
++ Get information from `masteRkey` on the analyses to run: `get.info()`
++ Get a data filter based on exclusion criteria: `get.chain()`
++ Select the appropriate variables: `get.sourceData()`
++ Apply the analysis-specific variable function: `varfun.ABC.#()`
++ Apply the analysis listed in column `stat.test` to the data
++ Organise the output `get.desriptives()`
++ Calculate confidence intervals for effect sizes `any2any()`
++ Return the ouput
+
+
+
+
+
