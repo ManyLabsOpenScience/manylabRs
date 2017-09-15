@@ -566,13 +566,9 @@ any2any <- function(testInfo,
   }
 
   if(grepl("Z", esType, fixed = TRUE)){
-    if(length(testInfo$estimate)>1){
       if(alternative=="one"){
-        n1<-n1/2
-        n2<-n2/2
-        N<-n1+n2
+        n1 <- n2 <- N/2
         }
-    }
   }
   #which(colnames(ESCI) == "d"):NCOL(ESCI)
   if(is.null(st)){stop("No test statistic to caclulate ES-CI.")}

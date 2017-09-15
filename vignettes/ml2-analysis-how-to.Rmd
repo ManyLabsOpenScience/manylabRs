@@ -9,6 +9,12 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r,echo=FALSE}
+require(manylabRs)
+library(reshape2)
+library(plyr)
+library(broom)
+```
 
 # Analysis Strategy
 
@@ -41,11 +47,13 @@ Each row in the table represents an analysis, the columns contain specific infor
 
 * Columns J through L contain information about the nature of the analysis (Global, Primary Secondary).
 
-* Column M lists the name of a analysis specific *variable function* (`varfun.`) which in most cases just reorganises the variables specified in previous columns so they can be passed to the analysis code. In some cases these function perform specific calculations required by the original analyses.
+* Columns M through O contain information for study inclusion in figures and tables
 
-* Columns N through S contain information about the statistiscal tests 
+* Column P lists the name of a analysis specific *variable function* (`varfun.`) which in most cases just reorganises the variables specified in previous columns so they can be passed to the analysis code. In some cases these function perform specific calculations required by the original analyses.
 
-There's an `R` package which contains all the `R` code, including the datafiles.
+* Columns Q through V contain information about the statistiscal tests 
+
+The `R` package [**manylabRs**](https://github.com/ManyLabsOpenScience/manylabRs) contains the `R` functions that can read the information from this sheet and conduct analyses on the data.
 
 
 ## Install the package
@@ -70,11 +78,50 @@ First [download the tarball](https://github.com/ManyLabsOpenScience/manylabRs/pk
 
 The main function to inspect is `get.analyses()`.  
 
-+ It will take an analysis number (`studies`) from the `masteRkey` sheet and an indication of whether the analysis is `global` [1], `primary` [2], `secondary` [3], or `order` [4].
-+ Have a look at [`saveConsole.R`](https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/saveConsole.R) and the `testScript()` function. This will create a log file of the output.
-**Note:** These scripts assume you are on a Mac and you copied the dropbox folder to your harddrive.
+It will take one or more take analysis (`studies`) from the `masteRkey` sheet and an indication of whether the analysis is:
+1. `global` - will disregard the clusters in the data and use all valid caes for analyses, both `primary` and `secondary` analyses have a `global` variant.
+2. `primary`- target analysis of replication study conducted for each lab seperately.
+3. `secondary` - additional analyses for each lab conducted for each lab seperately.
+4. `order` - presentation order analyses disregard the clusters int he data, each order is analysed seperately
 
-### Main algorithm
+> Have a look at [`saveConsole.R`](https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/saveConsole.R) which calls the `testScript()` function and creates a log file with lots of info about the analysis steps.
+
+
+The example below runs a global analysis for `Huang.1`
+```{r}
+library(manylabRs)
+library(tidyverse)
+
+df <- get.analyses(studies = 1, analysis.type = 1)
+```
+
+The object `df` contains two named lists:^[the names correspond to the analysis name in the `masteRkey`]
+
+### `raw.case`
+
+This list contains dataframes with the relevant variables for each analysis, but before the analysis specific variable functions (`vafun`) are applied. There is a Boolean variable `case.include` which indicates whther a case is valid and should be included for analysis.
+
+```{r}
+head(tbl_df(df$raw.case$Huang.1))
+```
+
+### `aggregated`    
+
+The dataframe in `aggregated` contains the data as is was analysed, after the `varfun` is applied.
+
+```{r}
+glimpse(tbl_df(df$aggregated$Huang.1))
+```
+
+
+The output contains descriptives and sample summary characteristics and a variety of Effect Size measures.
+It also contains the console output of the statistical test that was conducted:
+
+```{r}
+cat(paste0(df$aggregated$Huang.1$test.ConsoleOutput))
+```
+
+## Other algorithms
 
 + Get information from `masteRkey` on the analyses to run: `get.info()`
 + Get a data filter based on exclusion criteria: `get.chain()`
