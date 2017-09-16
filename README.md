@@ -29,7 +29,7 @@ The main function to inspect is `get.analyses()`.
 It will take one or more take analysis (`studies`) from the `masteRkey` sheet and an indication of whether the analysis is:
 1. `global` - will disregard the clusters in the data and use all valid caes for analyses, both `primary` and `secondary` analyses have a `global` variant.
 2. `primary`- target analysis of replication study conducted for each lab seperately.
-3. `secondary` - additional analyses for each lab conducted for each lab seperately.
+3. `secondary` - additional analyses conducted for each lab seperately.
 4. `order` - presentation order analyses disregard the clusters int he data, each order is analysed seperately
 
 > Have a look at [`saveConsole.R`](https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/saveConsole.R) which calls the `testScript()` function and creates a log file with lots of info about the analysis steps.
@@ -47,7 +47,7 @@ The object `df` contains two named lists:^[the names correspond to the analysis 
 
 ### `raw.case`
 
-This list contains dataframes with the relevant variables for each analysis, but before the analysis specific variable functions (`vafun`) are applied. There is a Boolean variable `case.include` which indicates whther a case is valid and should be included for analysis.
+This list contains dataframes with the relevant variables for each analysis, but before the analysis specific variable functions (`varfun`) are applied. There is a Boolean variable `case.include` which indicates whther a case is valid and should be included for analysis.
 
 ```{r}
 df$raw.case$Huang.1
