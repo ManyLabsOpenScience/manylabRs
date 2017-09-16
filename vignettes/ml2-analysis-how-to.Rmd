@@ -1,10 +1,10 @@
 ---
-title: "ManyLabs2 Data Cleaning"
+title: "ManyLabs2 Data Analysis"
 author: "[ManyLabs2](https://osf.io/8cd4r) (Corresponding coder: [Fred Hasselman](https://osf.io/ujgs6/))"
 date: "24 October 2015"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Data analysis how-to}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

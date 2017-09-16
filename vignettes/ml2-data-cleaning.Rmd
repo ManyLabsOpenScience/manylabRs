@@ -4,7 +4,7 @@ author: "[ManyLabs2](https://osf.io/8cd4r) (Corresponding coder: [Fred Hasselman
 date: "24 October 2015"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Data cleaning report}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

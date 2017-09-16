@@ -109,7 +109,7 @@ get.analyses <- function(studies       = NA,
     if(Stud%in%"vanLange"){Stud <- "VanLange"}
     if(Stud%in%"Giessner"){Stud <- "Geissner"}
 
-    ML2.df$study.order <- laply(seq_along(stmp), function(o){which(grepl(Stud,stmp[[o]]))%0!0%NA})
+    ML2.df$study.order <- laply(seq_along(stmp), function(o){which(grepl(Stud,stmp[[o]]))%00%NA})
 
     # Loop over groups within study
     ugroup       <- sort(na.exclude(unique(eval(parse(text=toRun$ugroup)))))
@@ -674,7 +674,7 @@ get.Order <- function(df, S1=TRUE){
   cnt = 0
 
   for(i in 1:nrow(df)){
-    if(!nzchar(df$StudyOrder[i]%0!0%0)){
+    if(!nzchar(df$StudyOrder[i]%00%0)){
       cnt = cnt + 1
       #             if(df$IDiffOrder[i]==""){
       #                 df$StudyOrderN[i] <- NA
@@ -1237,7 +1237,11 @@ generateOutput <-  function(describe = describe,
   if(grepl("OR",test$estype, fixed = TRUE)){
     Nv <- c(descr$n[1],descr$n[3])
   } else {
-    Nv <- c(descr$n[1],descr$n[2])
+    if(grepl("Z",test$estype, fixed=TRUE)){
+      Nv <- c(descr$n[1]+descr$n[3],descr$n[2]+descr$n[4])
+    } else {
+      Nv <- c(descr$n[1],descr$n[2])
+    }
   }
 
   if(!is.na(test[1,1])){

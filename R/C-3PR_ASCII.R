@@ -565,12 +565,16 @@ any2any <- function(testInfo,
     }
   }
 
+
   if(grepl("Z", esType, fixed = TRUE)){
-      if(alternative=="one"){
-        n1 <- n2 <- N/2
-        }
+    if(alternative=="one"){
+      n1<-N/2
+      n2<-N/2
+      alternative<-"two"
+    }
   }
-  #which(colnames(ESCI) == "d"):NCOL(ESCI)
+
+
   if(is.null(st)){stop("No test statistic to caclulate ES-CI.")}
 
   # Use Cohen's dz for paired t-test
@@ -598,6 +602,11 @@ any2any <- function(testInfo,
     CIcalc    <- FALSE
   }
 
+  # if(alternative=="two"){
+  #   tail <- 2
+  # } else {
+  #   tail <- 1
+  # }
 
   if(is.na(esType.cl)){esType.cl<-esType}
 
@@ -675,12 +684,11 @@ any2any <- function(testInfo,
                                                        verbose = FALSE, dig = 5),
              X2   = esComp[[cnt]] <- compute.es::chies(chi.sq = x, level = CL*100,
                                                        n = N, verbose = FALSE, dig = 5),
-             Z    = esComp[[cnt]] <- compute.es::pes(  p = pnorm(abs(x), lower.tail= FALSE)*2, level = CL*100,
-                                                       n.1 = n1, n.2 = n2,
-                                                       tail = "one", verbose = FALSE, dig = 5),
+             Z    = esComp[[cnt]] <- compute.es::pes(p = pnorm(abs(x), lower.tail= FALSE)*2, level = CL*100,
+                                                       n.1 = n1, n.2 = n2, tail = "two", verbose = TRUE, dig = 5),
              lm.Z  = esComp[[cnt]] <- compute.es::a.pes(p = pnorm(abs(x), lower.tail= FALSE)*2, level = CL*100,
                                                         n.1 = n1, n.2 = n2, R = rID, q = q,
-                                                        tail = "one", verbose = FALSE, dig = 5),
+                                                        tail = alternative, verbose = FALSE, dig = 5),
              OR    = esComp[[cnt]] <- compute.es::lores(lor=log(x), n.1 = n1, n.2 = n2,
                                                         var.lor = var.lor, verbose = FALSE, dig = 5, level = CL*100)
       )

@@ -326,16 +326,16 @@ try.CATCH <- function(expr){
 #' @description When your functions wear these rose tinted glasses, the world will appear to be a nicer, fluffier place.
 #' @seealso purrr::%||%
 #' @examples
-#' Inf %0!0% NA
+#' Inf %00% NA
 #'
-#' numeric(0) %0!0% ''
+#' numeric(0) %00% ''
 #'
-#' NA %0!0% 0
+#' NA %00% 0
 #'
-#' NaN %0!0% NA
+#' NaN %00% NA
 #'
-#' NULL %0!0% NA
-`%0!0%` <- function(x,y){
+#' NULL %00% NA
+`%00%` <- function(x,y){
   l0<-isna<-isnan<-isinf<-isnll<-FALSE
   if(length(x)==0){
     l0=TRUE

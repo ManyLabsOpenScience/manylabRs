@@ -1,7 +1,5 @@
 # Code to bulk generate analyses, saves consoe output to a log file.
-#library(manylabRs)
-
-source('/Users/Fred/Documents/GitHub/manylabRs/manylabRs/R/C-3PR_ASCII.R')
+library(manylabRs)
 init()
 
 # Setup variables ---------------------------------------------------------------------------------------------------
