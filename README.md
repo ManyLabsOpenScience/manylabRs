@@ -43,7 +43,7 @@ library(tidyverse)
 df <- get.analyses(studies = 1, analysis.type = 1)
 ```
 
-The object `df` contains two named lists:^[the names correspond to the analysis name in the `masteRkey`]
+The object `df` contains two named lists:^[these names correspond to the analysis name in the masteRkey spreadsheet]
 
 ### `raw.case`
 
