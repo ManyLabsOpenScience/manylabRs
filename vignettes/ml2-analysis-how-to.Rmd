@@ -74,7 +74,7 @@ install_github("ManyLabsOpenScience/manylabRs")
 First [download the tarball](https://github.com/ManyLabsOpenScience/manylabRs/pkg/), then install the package locally through the RStudio package installer: `Tools` >> `Install Packages...`
 
 
-## Main function
+## Main function: `get.analyses()`
 
 The main function to inspect is `get.analyses()`.  
 
@@ -121,6 +121,90 @@ It also contains the console output of the statistical test that was conducted:
 cat(paste0(df$aggregated$Huang.1$test.ConsoleOutput))
 ```
 
+## **A closer look: Four steps to get from data to results**
+
+The code of the function `get.analyses()` is not very readable because it include a lot of error-checking, error-reporting, conditional statements and... well... because we are not professional software engineers, but scientist doing the best we can.     
+
+The function was created to be able to handle a batch of many different analyses in one go and save the results many different files. Here, we will skip the error-checks and file-saving and focus on the four major steps by taking the first analysis in the `masteRkey` spreadsheet, `Huang.1`, and analysing the data from the `source` named `brasilia`.
+
+The four steps that are be applied to all analyses in ManyLabs 2 are:
+
+1. **C**ollect information about the analysis from the `masteRkey` spreadsheet.
+2. **E**xtract the data and reorganise it so it can be passed to the analysis function
+3. **C**onduct the analysis
+4. **E**xtract the results
+
+
+### Step 1 - Collect information
+
+The first step is always to use the `masteRkey` spreadsheet to gather all the information needed to:
+* Extract the appropriate data (variables and cases) for this analysis and `source`
+* Conduct the appropriate analyis on the extracted data
+
+```{r step1, echo=TRUE, tidy=FALSE}
+# NOTE: This example follows some (but not all!!) steps of the main function: get.analyses()
+
+# Select analysis 1 [Huang.1] and source 'brasilia'
+runningAnalysis <- 1
+runningGroup    <- 'brasilia'
+
+# Get information about the analysis to run
+masteRkeyInfo  <- get.GoogleSheet(data='ML2masteRkey')$df[runningAnalysis,]
+
+# Get the appropriate 'raw' dataset [Slate1 or Slate2]
+ifelse(masteRkeyInfo$study.slate == 1, data(ML2_S1),data(ML2_S2))
+
+# Organise the information into a list object
+analysisInfo   <- get.info(masteRkeyInfo, colnames(ML2.S1), subset="all")
+
+# Use analysisInfo to generate a cahin of filter instructions to select valid variables and cases
+filterChain <- get.chain(analysisInfo)
+```
+
+Let's have a look at the filterChain object:
+```{r}
+filterChain
+```
+
+It contains two fields:
+* `$df` a `dplyr` command for selecting the appropriate variables and (if applicable) filtering on `source` characteristics indicated by the column `masteRkey$source.include` (e.g. whether the data were collected on-line). For the present analysis we do not have to filter on `source` characteristics.
+* `$vars`  selecting valid rows.
+
+### Step 2 - Extract the data
+
+```{r step 2}
+# Apply the filterChain to select aprropriate variables from ML2.S1
+df.raw <- eval(parse(text=paste("ML2.S1", filterChain$df)))
+
+# Apply the filterChain to generate a list object that represents the design cells
+df.split <- get.sourceData(filterChain, df.raw[df.raw$source%in%runningGroup,], analysisInfo)
+
+# Create a list object with data vectors and appropriate labels, that can be passed to the analysis function
+vars   <- eval(parse(text=paste0(masteRkeyInfo$stat.vars,'(df.split)',collapse="")))
+```
+
+### Step 3 - Conduct the analysis
+
+
+```{r step 3}
+# Get the paramers the parameters to use for the statistical analysis
+stat.params <<- analysisInfo$stat.params
+
+# Run the analysis listed in masteRkey column 'stat.test' usinf the data vectors in 'vars'
+stat.test   <- with(vars, eval(parse(text = masteRkeyInfo$stat.test)))
+```
+
+### Step 4 - Extract the results
+
+
+```{r step 4}
+# Return descriptives and summaries
+describe <- get.descriptives(stat.test = stat.test, vars = vars, keytable  = masteRkeyInfo)
+
+# Generate output
+ESCI <- generateOutput(describe = describe, runningGroup = runningGroup, runningAnalysis = runningAnalysis)
+```
+
 ## Other algorithms
 
 + Get information from `masteRkey` on the analyses to run: `get.info()`
@@ -128,7 +212,7 @@ cat(paste0(df$aggregated$Huang.1$test.ConsoleOutput))
 + Select the appropriate variables: `get.sourceData()`
 + Apply the analysis-specific variable function: `varfun.ABC.#()`
 + Apply the analysis listed in column `stat.test` to the data
-+ Organise the output `get.desriptives()`
++ Organise the output `get.descriptives()`
 + Calculate confidence intervals for effect sizes `any2any()`
 + Return the ouput
 

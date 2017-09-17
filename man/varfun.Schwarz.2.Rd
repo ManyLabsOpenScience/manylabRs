@@ -20,6 +20,9 @@ Dataset ready for analysis
  specific question in each item order condition, and then compare the correlations using
  the Fisher r-to-z transformation. Participants with valid responses to both items will
  be included in the analysis.
+
+
+ @export
 }
 \references{
 Schwarz, N., Strack, F., & Mai, H. P. (1991). Assimilation and contrast effects in part-whole question sequences: A conversational logic analysis. \strong{Public Opinion Quarterly, 55}, 3-23.

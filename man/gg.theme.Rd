@@ -4,10 +4,11 @@
 \alias{gg.theme}
 \title{gg.theme}
 \usage{
-gg.theme(type = c("clean", "noax"), useArial = F, afmPATH = "~/Dropbox")
+gg.theme(type = c("clean", "noax"), useArial = FALSE,
+  afmPATH = "~/Dropbox")
 }
 \arguments{
-\item{type}{One of \code{"clean"}, or \code{"noax"}}
+\item{type}{One of \code{clean}, or \code{noax}}
 
 \item{useArial}{Use the Arial font (requires \code{.afm} font files in the \code{afmPath})}
 
@@ -20,9 +21,10 @@ A theme for \code{ggplot2}.
 gg.theme
 }
 \details{
-Will generate a \code{"clean"} ggplot theme, or a theme without any axes (\code{"noax"}).
+Will generate a \code{clean} ggplot theme, or a theme without any axes (\code{noax}).
 
-Some scientific journals explicitly request the Arial font should be used in figures. This can be achieved by using \code{.afm} font format (see, e.g. http://www.pure-mac.com/font.html).
+Some scientific journals explicitly request the Arial font should be used in figures.
+This can be achieved by using \code{.afm} font format (see, e.g. http://www.pure-mac.com/font.html).
 }
 \examples{
 library(ggplot2)

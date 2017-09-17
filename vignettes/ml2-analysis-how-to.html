@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="ManyLabs2 (Corresponding coder: Fred Hasselman)" />
+
+<meta name="date" content="2015-10-24" />
+
+<title>ManyLabs2 Data Analysis</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">ManyLabs2 Data Analysis</h1>
+<h4 class="author"><em><a href="https://osf.io/8cd4r">ManyLabs2</a> (Corresponding coder: <a href="https://osf.io/ujgs6/">Fred Hasselman</a>)</em></h4>
+<h4 class="date"><em>24 October 2015</em></h4>
+
+
+
+<div id="analysis-strategy" class="section level1">
+<h1>Analysis Strategy</h1>
+<p>The ManyLabs2 data analysis strategy attempts to regard three principles that maximize research transparency:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Principle of Equality</strong>: All data should be treated equally by a code. That is, the code should do its job generating results while at the same time being as naive as possible to the particular facts of the study being analysed. This will reduce any chances of bias with respect to the outcomes of a certain dataset or a particular study. If it is necessary to add study specific code, the second principle should be regarded.</p></li>
+<li><p><strong>Principle of Transparency</strong>: All operations that are crucial for obtaining an analysis result should be available for inspection by anyone who wishes to do so. This should be possible without the help of the auhtors that generated the code. The operations concern the application of data filtering rules, computation of variables derived from original measurements, running an analysis and constructing graphs, tables and figures. If full transparency is not possible, the third principle should be regarded.</p></li>
+<li><p><strong>Principle of Reproducibility</strong>: The most basic requirement for analysis results is that they should be reproducable given the original code and the original data set. However, any new implementation of the same analysis strategy in a different context, or application of the code to a different dataset, e.g. a replication study, should not be problematic. That is, outcomes may differ between data sets, but this should not be attributable to any details of the code or the analysis strategy.</p></li>
+</ol>
+<div id="r-as-a-parser-of-online-code." class="section level2">
+<h2><code>R</code> as a parser of online code.</h2>
+<p>The <a href="https://docs.google.com/document/d/1B5sVz3jlKMGnpxik-cfCeR8ngeQ249bzQExaVd5FzZM/edit">pre-registered Manylabs2 protocol</a> describes a number of analyses per replication study that can be categorised as <strong>Primary</strong> (target replications per site), <strong>Secondary</strong> (additional analyses per site, e.g. on subgroups), and <strong>Global</strong> (analyses on the entire dataset).</p>
+<p>These <em>promised analyses</em> have all been implemented in <code>R</code> in a transparent way and this implementation is now ready for an independent review.</p>
+</div>
+<div id="implementation" class="section level2">
+<h2>Implementation</h2>
+<p>Functions avalaible in an <a href="https://github.com/ManyLabsOpenScience/manylabRs"><code>R</code> package on GitHub</a> (<a href="https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/manylabRs.pdf">PDF manual</a>) extract information and instructions about each promised analysis a table that is openly accessible, the <a href="https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/edit#gid=769239110">masteRkey spreadsheet</a>.</p>
+<p>Each row in the table represents an analysis, the columns contain specific information about the analysis:</p>
+<ul>
+<li><p>Columns A through E are identifiers for study, analysis and slate.</p></li>
+<li><p>Column F and G contain <code>R</code> commands which will extract and label the columnms from the dataset needed for the analysis.</p></li>
+<li><p>Column H and I contain filter instructions for cases and subsamnples.</p></li>
+<li><p>Columns J through L contain information about the nature of the analysis (Global, Primary Secondary).</p></li>
+<li><p>Columns M through O contain information for study inclusion in figures and tables</p></li>
+<li><p>Column P lists the name of a analysis specific <em>variable function</em> (<code>varfun.</code>) which in most cases just reorganises the variables specified in previous columns so they can be passed to the analysis code. In some cases these function perform specific calculations required by the original analyses.</p></li>
+<li><p>Columns Q through V contain information about the statistiscal tests</p></li>
+</ul>
+<p>The <code>R</code> package <a href="https://github.com/ManyLabsOpenScience/manylabRs"><strong>manylabRs</strong></a> contains the <code>R</code> functions that can read the information from this sheet and conduct analyses on the data.</p>
+</div>
+<div id="install-the-package" class="section level2">
+<h2>Install the package</h2>
+<p>Several ways to install the package.</p>
+<div id="source-from-github" class="section level3">
+<h3>Source from GitHub</h3>
+<p>Use the code below to install the <code>manylabRs</code> package directly from <a href="https://github.com/ManyLabsOpenScience/manylabRs">GitHub</a>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(devtools)
+<span class="kw">install_github</span>(<span class="st">&quot;ManyLabsOpenScience/manylabRs&quot;</span>)</code></pre></div>
+</div>
+<div id="download-tarball-from-github" class="section level3">
+<h3>Download tarball from GitHub</h3>
+<p>First <a href="https://github.com/ManyLabsOpenScience/manylabRs/pkg/">download the tarball</a>, then install the package locally through the RStudio package installer: <code>Tools</code> &gt;&gt; <code>Install Packages...</code></p>
+</div>
+</div>
+<div id="main-function-get.analyses" class="section level2">
+<h2>Main function: <code>get.analyses()</code></h2>
+<p>The main function to inspect is <code>get.analyses()</code>.</p>
+<p>It will take one or more take analysis (<code>studies</code>) from the <code>masteRkey</code> sheet and an indication of whether the analysis is: 1. <code>global</code> - will disregard the clusters in the data and use all valid caes for analyses, both <code>primary</code> and <code>secondary</code> analyses have a <code>global</code> variant. 2. <code>primary</code>- target analysis of replication study conducted for each lab seperately. 3. <code>secondary</code> - additional analyses for each lab conducted for each lab seperately. 4. <code>order</code> - presentation order analyses disregard the clusters int he data, each order is analysed seperately</p>
+<blockquote>
+<p>Have a look at <a href="https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/saveConsole.R"><code>saveConsole.R</code></a> which calls the <code>testScript()</code> function and creates a log file with lots of info about the analysis steps.</p>
+</blockquote>
+<p>The example below runs a global analysis for <code>Huang.1</code></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(manylabRs)
+<span class="kw">library</span>(tidyverse)</code></pre></div>
+<pre><code>## Loading tidyverse: ggplot2
+## Loading tidyverse: tibble
+## Loading tidyverse: tidyr
+## Loading tidyverse: readr
+## Loading tidyverse: purrr
+## Loading tidyverse: dplyr</code></pre>
+<pre><code>## Conflicts with tidy packages ----------------------------------------------</code></pre>
+<pre><code>## arrange():   dplyr, plyr
+## compact():   purrr, plyr
+## count():     dplyr, plyr
+## failwith():  dplyr, plyr
+## filter():    dplyr, stats
+## id():        dplyr, plyr
+## lag():       dplyr, stats
+## mutate():    dplyr, plyr
+## rename():    dplyr, plyr
+## summarise(): dplyr, plyr
+## summarize(): dplyr, plyr</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">get.analyses</span>(<span class="dt">studies =</span> <span class="dv">1</span>, <span class="dt">analysis.type =</span> <span class="dv">1</span>)</code></pre></div>
+<pre><code>## 
+##  
+##  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~get.analyses~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##  # Downloaded keytable Googlesheet: ML2_masteRkey [https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/]
+##  # 
+##  # Loaded data from disk: 'ML2_RawData_S1.rds' and 'ML2_RawData_S1.rds'[~/Dropbox/Manylabs2/TestOutput/RAW.DATA.PRIVATE]
+##  # 
+##  # Downloaded information about the data sources from Googlesheet: 'ML2_SourceInfo.xlsx' [https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/]
+##  # 
+##  # Analyzing studies in study.global.include
+##  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 
+##  
+##  ~~~~~~HUANG.1~~~~~~
+##  # 1 Huang.1 - START
+## 
+##  # 
+##  # 1 Huang.1 - all: var.equal set to: FALSE
+##  # 
+##  # 1 Huang.1 - COMPLETED
+##  ~~~~~~~~~~~~~~~~~~~~~~~</code></pre>
+<p>The object <code>df</code> contains two named lists:<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></p>
+<div id="raw.case" class="section level3">
+<h3><code>raw.case</code></h3>
+<p>This list contains dataframes with the relevant variables for each analysis, but before the analysis specific variable functions (<code>vafun</code>) are applied. There is a Boolean variable <code>case.include</code> which indicates whther a case is valid and should be included for analysis.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(<span class="kw">tbl_df</span>(df<span class="op">$</span>raw.case<span class="op">$</span>Huang.<span class="dv">1</span>))</code></pre></div>
+<pre><code>## # A tibble: 6 x 25
+##                                                     .id   source
+##                                                   &lt;chr&gt;    &lt;chr&gt;
+## 1 ML2_Slate1_Brazil__Portuguese_execution_illegal_r.csv brasilia
+## 2 ML2_Slate1_Brazil__Portuguese_execution_illegal_r.csv brasilia
+## 3 ML2_Slate1_Brazil__Portuguese_execution_illegal_r.csv brasilia
+## 4 ML2_Slate1_Brazil__Portuguese_execution_illegal_r.csv brasilia
+## 5 ML2_Slate1_Brazil__Portuguese_execution_illegal_r.csv brasilia
+## 6 ML2_Slate1_Brazil__Portuguese_execution_illegal_r.csv brasilia
+## # ... with 23 more variables: huan1.1_Y1 &lt;dbl&gt;, huan1.1_R0 &lt;int&gt;,
+## #   huan2.1_Y1 &lt;dbl&gt;, huan2.1_R0 &lt;int&gt;, Source.Global &lt;chr&gt;,
+## #   Source.Primary &lt;chr&gt;, Source.Secondary &lt;chr&gt;, Country &lt;chr&gt;,
+## #   Location &lt;chr&gt;, Language &lt;chr&gt;, Weird &lt;int&gt;, Execution &lt;chr&gt;,
+## #   SubjectPool &lt;chr&gt;, Setting &lt;chr&gt;, Tablet &lt;chr&gt;, Pencil &lt;chr&gt;,
+## #   StudyOrderN &lt;chr&gt;, IDiffOrderN &lt;chr&gt;, uID &lt;int&gt;, study.order &lt;int&gt;,
+## #   analysis.type &lt;fctr&gt;, subset &lt;fctr&gt;, case.include &lt;lgl&gt;</code></pre>
+</div>
+<div id="aggregated" class="section level3">
+<h3><code>aggregated</code></h3>
+<p>The dataframe in <code>aggregated</code> contains the data as is was analysed, after the <code>varfun</code> is applied.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">glimpse</span>(<span class="kw">tbl_df</span>(df<span class="op">$</span>aggregated<span class="op">$</span>Huang.<span class="dv">1</span>))</code></pre></div>
+<pre><code>## Observations: 1
+## Variables: 116
+## $ study.id                   &lt;int&gt; 1
+## $ study.slate                &lt;int&gt; 1
+## $ study.name                 &lt;fctr&gt; Huang
+## $ study.source               &lt;fctr&gt; all
+## $ analysis.type              &lt;fctr&gt; Global
+## $ analysis.name              &lt;fctr&gt; Huang.1
+## $ stat.N                     &lt;int&gt; 6591
+## $ stat.n1                    &lt;int&gt; 3331
+## $ stat.n2                    &lt;int&gt; 3260
+## $ stat.cond1.name            &lt;chr&gt; &quot;High&quot;
+## $ stat.cond1.column          &lt;chr&gt; &quot;ignore&quot;
+## $ stat.cond1.n               &lt;dbl&gt; 3331
+## $ stat.cond1.mean            &lt;dbl&gt; 11.70344
+## $ stat.cond1.sd              &lt;dbl&gt; 84.31498
+## $ stat.cond1.median          &lt;dbl&gt; 0
+## $ stat.cond1.trimmed         &lt;dbl&gt; 13.03014
+## $ stat.cond1.mad             &lt;dbl&gt; 84.5082
+## $ stat.cond1.min             &lt;dbl&gt; -185.87
+## $ stat.cond1.max             &lt;dbl&gt; 178
+## $ stat.cond1.range           &lt;dbl&gt; 363.87
+## $ stat.cond1.skew            &lt;dbl&gt; -0.0797105
+## $ stat.cond1.kurtosis        &lt;dbl&gt; -0.541009
+## $ stat.cond1.se              &lt;dbl&gt; 1.46089
+## $ stat.cond2.name            &lt;chr&gt; &quot;Low&quot;
+## $ stat.cond2.column          &lt;chr&gt; &quot;ignore&quot;
+## $ stat.cond2.n               &lt;dbl&gt; 3260
+## $ stat.cond2.mean            &lt;dbl&gt; -22.69856
+## $ stat.cond2.sd              &lt;dbl&gt; 88.77561
+## $ stat.cond2.median          &lt;dbl&gt; -16
+## $ stat.cond2.trimmed         &lt;dbl&gt; -26.39949
+## $ stat.cond2.mad             &lt;dbl&gt; 102.2994
+## $ stat.cond2.min             &lt;dbl&gt; -186
+## $ stat.cond2.max             &lt;dbl&gt; 176.28
+## $ stat.cond2.range           &lt;dbl&gt; 362.28
+## $ stat.cond2.skew            &lt;dbl&gt; 0.3025972
+## $ stat.cond2.kurtosis        &lt;dbl&gt; -0.6416739
+## $ stat.cond2.se              &lt;dbl&gt; 1.554837
+## $ test.type                  &lt;fctr&gt; t
+## $ test.estimate              &lt;dbl&gt; 34.402
+## $ test.estimate1             &lt;dbl&gt; 11.70344
+## $ test.estimate2             &lt;dbl&gt; -22.69856
+## $ test.statistic             &lt;dbl&gt; 16.12487
+## $ test.p.value               &lt;dbl&gt; 2.146219e-57
+## $ test.parameter             &lt;dbl&gt; 6554.05
+## $ test.conf.low              &lt;dbl&gt; 30.21969
+## $ test.conf.high             &lt;dbl&gt; 38.58431
+## $ test.method                &lt;chr&gt; &quot;Welch Two Sample t-test&quot;
+## $ test.alternative           &lt;fctr&gt; two.sided
+## $ test.estype                &lt;chr&gt; &quot;t&quot;
+## $ test.varequal              &lt;lgl&gt; FALSE
+## $ ESCI.ncp                   &lt;dbl&gt; 16.12487
+## $ ESCI.ncp.lo                &lt;dbl&gt; 14.14495
+## $ ESCI.ncp.hi                &lt;dbl&gt; 18.10357
+## $ ESCI.N.total               &lt;dbl&gt; 6591
+## $ ESCI.n.1                   &lt;dbl&gt; 3331
+## $ ESCI.n.2                   &lt;dbl&gt; 3260
+## $ ESCI.d                     &lt;dbl&gt; 0.39726
+## $ ESCI.var.d                 &lt;dbl&gt; 0.00062
+## $ ESCI.l.d                   &lt;dbl&gt; 0.34848
+## $ ESCI.u.d                   &lt;dbl&gt; 0.44601
+## $ ESCI.U3.d                  &lt;dbl&gt; 65.44124
+## $ ESCI.cl.d                  &lt;dbl&gt; 61.06087
+## $ ESCI.cliffs.d              &lt;dbl&gt; 0.22122
+## $ ESCI.pval.d                &lt;dbl&gt; 0
+## $ ESCI.g                     &lt;dbl&gt; 0.39722
+## $ ESCI.var.g                 &lt;dbl&gt; 0.00062
+## $ ESCI.l.g                   &lt;dbl&gt; 0.34844
+## $ ESCI.u.g                   &lt;dbl&gt; 0.44596
+## $ ESCI.U3.g                  &lt;dbl&gt; 65.43957
+## $ ESCI.cl.g                  &lt;dbl&gt; 61.05964
+## $ ESCI.pval.g                &lt;dbl&gt; 0
+## $ ESCI.r                     &lt;dbl&gt; 0.19484
+## $ ESCI.var.r                 &lt;dbl&gt; 0.00014
+## $ ESCI.l.r                   &lt;dbl&gt; 0.17167
+## $ ESCI.u.r                   &lt;dbl&gt; 0.21768
+## $ ESCI.pval.r                &lt;dbl&gt; 0
+## $ ESCI.fisher.z              &lt;dbl&gt; 0.19737
+## $ ESCI.var.z                 &lt;dbl&gt; 0.00015
+## $ ESCI.l.z                   &lt;dbl&gt; 0.17339
+## $ ESCI.u.z                   &lt;dbl&gt; 0.22122
+## $ ESCI.OR                    &lt;dbl&gt; 2.05557
+## $ ESCI.l.or                  &lt;dbl&gt; 1.88152
+## $ ESCI.u.or                  &lt;dbl&gt; 2.2456
+## $ ESCI.pval.or               &lt;dbl&gt; 0
+## $ ESCI.lOR                   &lt;dbl&gt; 0.72055
+## $ ESCI.l.lor                 &lt;dbl&gt; 0.63208
+## $ ESCI.u.lor                 &lt;dbl&gt; 0.80897
+## $ ESCI.pval.lor              &lt;dbl&gt; 0
+## $ ESCI.cohensQ               &lt;lgl&gt; NA
+## $ ESCI.cohensQ.l             &lt;lgl&gt; NA
+## $ ESCI.cohensQ.u             &lt;lgl&gt; NA
+## $ ESCI.bootR1                &lt;lgl&gt; NA
+## $ ESCI.bootR2                &lt;lgl&gt; NA
+## $ ESCI.bootCI.l              &lt;lgl&gt; NA
+## $ ESCI.bootCI.u              &lt;lgl&gt; NA
+## $ test.ConsoleOutput         &lt;fctr&gt; 
+##  Welch Two Sample t-test
+## 
+## data:  ...
+## $ source.N.sources.global    &lt;int&gt; 64
+## $ source.N.sources.primary   &lt;int&gt; 64
+## $ source.N.sources.secondary &lt;int&gt; 74
+## $ source.N.countries         &lt;int&gt; 28
+## $ source.N.locations         &lt;int&gt; 59
+## $ source.N.languages         &lt;int&gt; 15
+## $ source.Pct.WEIRD           &lt;dbl&gt; 72.19608
+## $ source.Tbl.Execution       &lt;chr&gt; &quot;Execution\nillegal   legal \n   33...
+## $ source.Tbl.subjectpool     &lt;chr&gt; &quot;SubjectPool\n  No  Yes \n2368 4111 &quot;
+## $ source.Tbl.setting         &lt;chr&gt; &quot;Setting\n         In a classroom  ...
+## $ source.Tbl.Tablet          &lt;chr&gt; &quot;Tablet\n                          ...
+## $ source.Tbl.Pencil          &lt;chr&gt; &quot;Pencil\nNo, the whole study was on...
+## $ source.N.studyorders1      &lt;int&gt; 6479
+## $ source.N.IDiffOrderN       &lt;int&gt; 782
+## $ source.N.uIDs              &lt;int&gt; 6589
+## $ source.N.studyorders2      &lt;int&gt; 13
+## $ source.Tbl.analysistype    &lt;chr&gt; &quot;analysis.type\nGlobal \n  6589 &quot;
+## $ source.Tbl.subset          &lt;chr&gt; &quot;subset\n all \n6589 &quot;
+## $ source.N.cases.included    &lt;int&gt; 6589
+## $ source.N.cases.excluded    &lt;int&gt; 674</code></pre>
+<p>The output contains descriptives and sample summary characteristics and a variety of Effect Size measures. It also contains the console output of the statistical test that was conducted:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cat</span>(<span class="kw">paste0</span>(df<span class="op">$</span>aggregated<span class="op">$</span>Huang.<span class="dv">1</span><span class="op">$</span>test.ConsoleOutput))</code></pre></div>
+<pre><code>## 
+##  Welch Two Sample t-test
+## 
+## data:  High and Low
+## t = 16.125, df = 6554.1, p-value &lt; 2.2e-16
+## alternative hypothesis: true difference in means is not equal to 0
+## 95 percent confidence interval:
+##  30.21969 38.58431
+## sample estimates:
+## mean of x mean of y 
+##  11.70344 -22.69856</code></pre>
+</div>
+</div>
+<div id="a-closer-look-four-steps-to-get-from-data-to-results" class="section level2">
+<h2><strong>A closer look: Four steps to get from data to results</strong></h2>
+<p>The code of the function <code>get.analyses()</code> is not very readable because it include a lot of error-checking, error-reporting, conditional statements and… well… because we are not professional software engineers, but scientist doing the best we can.</p>
+<p>The function was created to be able to handle a batch of many different analyses in one go and save the results many different files. Here, we will skip the error-checks and file-saving and focus on the four major steps by taking the first analysis in the <code>masteRkey</code> spreadsheet, <code>Huang.1</code>, and analysing the data from the <code>source</code> named <code>brasilia</code>.</p>
+<p>The four steps that are be applied to all analyses in ManyLabs 2 are:</p>
+<ol style="list-style-type: decimal">
+<li><strong>C</strong>ollect information about the analysis from the <code>masteRkey</code> spreadsheet.</li>
+<li><strong>E</strong>xtract the data and reorganise it so it can be passed to the analysis function</li>
+<li><strong>C</strong>onduct the analysis</li>
+<li><strong>E</strong>xtract the results</li>
+</ol>
+<div id="step-1---collect-information" class="section level3">
+<h3>Step 1 - Collect information</h3>
+<p>The first step is always to use the <code>masteRkey</code> spreadsheet to gather all the information needed to: * Extract the appropriate data (variables and cases) for this analysis and <code>source</code> * Conduct the appropriate analyis on the extracted data</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># </span><span class="al">NOTE</span><span class="co">: This example follows some (but not all!!) steps of the main function: get.analyses()</span>
+
+<span class="co"># Select analysis 1 [Huang.1] and source 'brasilia'</span>
+runningAnalysis &lt;-<span class="st"> </span><span class="dv">1</span>
+runningGroup    &lt;-<span class="st"> 'brasilia'</span>
+
+<span class="co"># Get information about the analysis to run</span>
+masteRkeyInfo  &lt;-<span class="st"> </span><span class="kw">get.GoogleSheet</span>(<span class="dt">data=</span><span class="st">'ML2masteRkey'</span>)<span class="op">$</span>df[runningAnalysis,]
+
+<span class="co"># Get the appropriate 'raw' dataset [Slate1 or Slate2]</span>
+<span class="kw">ifelse</span>(masteRkeyInfo<span class="op">$</span>study.slate <span class="op">==</span><span class="st"> </span><span class="dv">1</span>, <span class="kw">data</span>(ML2_S1),<span class="kw">data</span>(ML2_S2))</code></pre></div>
+<pre><code>## [1] &quot;ML2_S1&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Organise the information into a list object</span>
+analysisInfo   &lt;-<span class="st"> </span><span class="kw">get.info</span>(masteRkeyInfo, <span class="kw">colnames</span>(ML2.S1), <span class="dt">subset=</span><span class="st">&quot;all&quot;</span>)
+
+<span class="co"># Use analysisInfo to generate a cahin of filter instructions to select valid variables and cases</span>
+filterChain &lt;-<span class="st"> </span><span class="kw">get.chain</span>(analysisInfo)</code></pre></div>
+<p>Let’s have a look at the filterChain object:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">filterChain</code></pre></div>
+<pre><code>## $df
+## [1] &quot; %&gt;% dplyr::select(1,6,149,150,156,157,520,521,522,523,524,525,526,527,528,529,530,531,534,535) %&gt;% dplyr::filter(is.character(source))&quot;
+## 
+## $vars
+## $vars$Condition.High
+## [1] &quot;High %&gt;% filter(huan1.1_Y1 &gt; 0 &amp; !is.na(huan1.1_Y1) &amp; huan1.1_R0 &gt; 0 &amp; !is.na(huan1.1_R0))&quot;
+## 
+## $vars$Condition.Low
+## [1] &quot;Low %&gt;% filter(huan2.1_Y1 &gt; 0 &amp; !is.na(huan2.1_Y1) &amp; huan2.1_R0 &gt; 0 &amp; !is.na(huan2.1_R0))&quot;</code></pre>
+<p>It contains two fields: * <code>$df</code> a <code>dplyr</code> command for selecting the appropriate variables and (if applicable) filtering on <code>source</code> characteristics indicated by the column <code>masteRkey$source.include</code> (e.g. whether the data were collected on-line). For the present analysis we do not have to filter on <code>source</code> characteristics. * <code>$vars</code> selecting valid rows.</p>
+</div>
+<div id="step-2---extract-the-data" class="section level3">
+<h3>Step 2 - Extract the data</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Apply the filterChain to select aprropriate variables from ML2.S1</span>
+df.raw &lt;-<span class="st"> </span><span class="kw">eval</span>(<span class="kw">parse</span>(<span class="dt">text=</span><span class="kw">paste</span>(<span class="st">&quot;ML2.S1&quot;</span>, filterChain<span class="op">$</span>df)))
+
+<span class="co"># Apply the filterChain to generate a list object that represents the design cells</span>
+df.split &lt;-<span class="st"> </span><span class="kw">get.sourceData</span>(filterChain, df.raw[df.raw<span class="op">$</span>source<span class="op">%in%</span>runningGroup,], analysisInfo)
+
+<span class="co"># Create a list object with data vectors and appropriate labels, that can be passed to the analysis function</span>
+vars   &lt;-<span class="st"> </span><span class="kw">eval</span>(<span class="kw">parse</span>(<span class="dt">text=</span><span class="kw">paste0</span>(masteRkeyInfo<span class="op">$</span>stat.vars,<span class="st">'(df.split)'</span>,<span class="dt">collapse=</span><span class="st">&quot;&quot;</span>)))</code></pre></div>
+</div>
+<div id="step-3---conduct-the-analysis" class="section level3">
+<h3>Step 3 - Conduct the analysis</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Get the paramers the parameters to use for the statistical analysis</span>
+stat.params &lt;&lt;-<span class="st"> </span>analysisInfo<span class="op">$</span>stat.params
+
+<span class="co"># Run the analysis listed in masteRkey column 'stat.test' usinf the data vectors in 'vars'</span>
+stat.test   &lt;-<span class="st"> </span><span class="kw">with</span>(vars, <span class="kw">eval</span>(<span class="kw">parse</span>(<span class="dt">text =</span> masteRkeyInfo<span class="op">$</span>stat.test)))</code></pre></div>
+</div>
+<div id="step-4---extract-the-results" class="section level3">
+<h3>Step 4 - Extract the results</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Return descriptives and summaries</span>
+describe &lt;-<span class="st"> </span><span class="kw">get.descriptives</span>(<span class="dt">stat.test =</span> stat.test, <span class="dt">vars =</span> vars, <span class="dt">keytable  =</span> masteRkeyInfo)
+
+<span class="co"># Generate output</span>
+ESCI &lt;-<span class="st"> </span><span class="kw">generateOutput</span>(<span class="dt">describe =</span> describe, <span class="dt">runningGroup =</span> runningGroup, <span class="dt">runningAnalysis =</span> runningAnalysis)</code></pre></div>
+</div>
+</div>
+<div id="other-algorithms" class="section level2">
+<h2>Other algorithms</h2>
+<ul>
+<li>Get information from <code>masteRkey</code> on the analyses to run: <code>get.info()</code></li>
+<li>Get a data filter based on exclusion criteria: <code>get.chain()</code></li>
+<li>Select the appropriate variables: <code>get.sourceData()</code></li>
+<li>Apply the analysis-specific variable function: <code>varfun.ABC.#()</code></li>
+<li>Apply the analysis listed in column <code>stat.test</code> to the data</li>
+<li>Organise the output <code>get.descriptives()</code></li>
+<li>Calculate confidence intervals for effect sizes <code>any2any()</code></li>
+<li>Return the ouput</li>
+</ul>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>the names correspond to the analysis name in the <code>masteRkey</code><a href="#fnref1">↩</a></p></li>
+</ol>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

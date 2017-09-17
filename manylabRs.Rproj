@@ -18,4 +18,4 @@ BuildType: Package
 PackageUseDevtools: Yes
 PackageInstallArgs: --no-multiarch --with-keep.source --resave-data
 PackageBuildBinaryArgs: --data-compress=bzip2
-PackageRoxygenize: rd,collate,namespace
+PackageRoxygenize: rd,collate,namespace,vignette

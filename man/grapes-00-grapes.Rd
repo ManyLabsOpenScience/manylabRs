@@ -9,7 +9,7 @@ x \%00\% y
 \arguments{
 \item{x}{If \code{x} is any of \code{Inf,-Inf,NA,NaN,NULL,length(x)==0}, it will return \code{y}; otherwise it returns \code{x}.}
 
-\item{y}{The value to return in case of catastrophy \code{>!<}}
+\item{y}{The value to return in case of catastrophy \code{>00<}}
 }
 \description{
 When your functions wear these rose tinted glasses, the world will appear to be a nicer, fluffier place.
