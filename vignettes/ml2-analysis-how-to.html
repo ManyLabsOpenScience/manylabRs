@@ -109,7 +109,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h3>Source from GitHub</h3>
 <p>Use the code below to install the <code>manylabRs</code> package directly from <a href="https://github.com/ManyLabsOpenScience/manylabRs">GitHub</a>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(devtools)
-<span class="kw">install_github</span>(<span class="st">&quot;ManyLabsOpenScience/manylabRs&quot;</span>)</code></pre></div>
+<span class="kw">install_github</span>(<span class="st">&quot;ManyLabsOpenScience/manylabRs&quot;</span>)
+<span class="kw">library</span>(manylabRs)
+<span class="kw">library</span>(tidyverse)
+<span class="kw">library</span>(broom)</code></pre></div>
 </div>
 <div id="download-tarball-from-github" class="section level3">
 <h3>Download tarball from GitHub</h3>
@@ -123,34 +126,24 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <blockquote>
 <p>Have a look at <a href="https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/saveConsole.R"><code>saveConsole.R</code></a> which calls the <code>testScript()</code> function and creates a log file with lots of info about the analysis steps.</p>
 </blockquote>
+<p><strong>IMPORTANT FOR REVIEWERS</strong></p>
+<p>You will have to point the function<code>get.analyses()</code> to where you downloaded these files:</p>
+<p><code>ML2_RawData_S1.rds</code><br />
+<code>ML2_RawData_S2.rds</code></p>
+<p>The script will assume the data are in a subdirectory of a rootdirectory given by the arguments:</p>
 <p>The example below runs a global analysis for <code>Huang.1</code></p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(manylabRs)
-<span class="kw">library</span>(tidyverse)</code></pre></div>
-<pre><code>## Loading tidyverse: ggplot2
-## Loading tidyverse: tibble
-## Loading tidyverse: tidyr
-## Loading tidyverse: readr
-## Loading tidyverse: purrr
-## Loading tidyverse: dplyr</code></pre>
-<pre><code>## Conflicts with tidy packages ----------------------------------------------</code></pre>
-<pre><code>## arrange():   dplyr, plyr
-## compact():   purrr, plyr
-## count():     dplyr, plyr
-## failwith():  dplyr, plyr
-## filter():    dplyr, stats
-## id():        dplyr, plyr
-## lag():       dplyr, stats
-## mutate():    dplyr, plyr
-## rename():    dplyr, plyr
-## summarise(): dplyr, plyr
-## summarize(): dplyr, plyr</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">get.analyses</span>(<span class="dt">studies =</span> <span class="dv">1</span>, <span class="dt">analysis.type =</span> <span class="dv">1</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">get.analyses</span>(<span class="dt">studies       =</span> <span class="dv">1</span>, 
+                   <span class="dt">analysis.type =</span> <span class="dv">1</span>, 
+                   <span class="dt">rootdir       =</span> MyRootDir,
+                   <span class="dt">indir =</span> <span class="kw">list</span>(<span class="dt">RAW.DATA   =</span> MyRawDataDir, 
+                                <span class="dt">MASTERKEY  =</span> <span class="st">&quot;&quot;</span>, 
+                                <span class="dt">SOURCEINFO =</span> <span class="st">&quot;&quot;</span>))</code></pre></div>
 <pre><code>## 
 ##  
 ##  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~get.analyses~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ##  # Downloaded keytable Googlesheet: ML2_masteRkey [https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/]
 ##  # 
-##  # Loaded data from disk: 'ML2_RawData_S1.rds' and 'ML2_RawData_S1.rds'[~/Dropbox/Manylabs2/TestOutput/RAW.DATA.PRIVATE]
+##  # Downloaded data from OSF: 'ML2_RawData_S1.rds' and 'ML2_RawData_S2.rds'
 ##  # 
 ##  # Downloaded information about the data sources from Googlesheet: 'ML2_SourceInfo.xlsx' [https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/]
 ##  # 
@@ -353,6 +346,7 @@ masteRkeyInfo  &lt;-<span class="st"> </span><span class="kw">get.GoogleSheet</s
 
 <span class="co"># Get the appropriate 'raw' dataset [Slate1 or Slate2]</span>
 <span class="kw">ifelse</span>(masteRkeyInfo<span class="op">$</span>study.slate <span class="op">==</span><span class="st"> </span><span class="dv">1</span>, <span class="kw">data</span>(ML2_S1),<span class="kw">data</span>(ML2_S2))</code></pre></div>
+<pre><code>## Warning in data(ML2_S1): data set 'ML2_S1' not found</code></pre>
 <pre><code>## [1] &quot;ML2_S1&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Organise the information into a list object</span>
 analysisInfo   &lt;-<span class="st"> </span><span class="kw">get.info</span>(masteRkeyInfo, <span class="kw">colnames</span>(ML2.S1), <span class="dt">subset=</span><span class="st">&quot;all&quot;</span>)

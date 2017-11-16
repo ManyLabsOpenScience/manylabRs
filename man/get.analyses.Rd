@@ -6,9 +6,10 @@
 \usage{
 get.analyses(studies = NA, analysis.type = NA, Nmin.raw = 30,
   Nmin.cond = 15, subset = c("all", "WEIRD", "NON-WEIRD")[1],
-  rootdir = "~/Dropbox/Manylabs2/TestOutput", indir = list(RAW.DATA =
-  "RAW.DATA.PRIVATE", MASTERKEY = "", SOURCEINFO = ""), outdir = list(ROBJECTS
-  = "ROBJECTS", RESULTS.RDS = "RESULTS.RDS"))
+  rootdir = normalizePath(paste0(find.package("manylabRs"), "/data")),
+  indir = list(RAW.DATA = "RAW.DATA.PRIVATE", MASTERKEY = "MASTERKEY",
+  SOURCEINFO = "SOURCEINFO"), outdir = list(ROBJECTS = "ROBJECTS", RESULTS.RDS
+  = "RESULTS.RDS"), onlineTables = TRUE)
 }
 \arguments{
 \item{studies}{Numeric vector with unique study IDs listed in the `masteRkey` table (default = all IDs).}

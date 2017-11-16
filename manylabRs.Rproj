@@ -12,6 +12,7 @@ Encoding: UTF-8
 RnwWeave: knitr
 LaTeX: XeLaTeX
 
+AutoAppendNewline: Yes
 StripTrailingWhitespace: Yes
 
 BuildType: Package
@@ -19,3 +20,5 @@ PackageUseDevtools: Yes
 PackageInstallArgs: --no-multiarch --with-keep.source --resave-data
 PackageBuildBinaryArgs: --data-compress=bzip2
 PackageRoxygenize: rd,collate,namespace,vignette
+
+QuitChildProcessesOnExit: Yes

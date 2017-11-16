@@ -9,11 +9,13 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r,echo=FALSE}
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+knitr::opts_chunk$set(tidy=FALSE)
 require(manylabRs)
 library(reshape2)
 library(plyr)
 library(broom)
+library(tidyverse)
 ```
 
 # Analysis Strategy
@@ -67,6 +69,9 @@ Use the code below to install the `manylabRs` package directly from [GitHub](htt
 ```{r, eval=FALSE}
 library(devtools)
 install_github("ManyLabsOpenScience/manylabRs")
+library(manylabRs)
+library(tidyverse)
+library(broom)
 ```
 
 ### Download tarball from GitHub
@@ -87,12 +92,37 @@ It will take one or more take analysis (`studies`) from the `masteRkey` sheet an
 > Have a look at [`saveConsole.R`](https://github.com/ManyLabsOpenScience/manylabRs/blob/master/inst/saveConsole.R) which calls the `testScript()` function and creates a log file with lots of info about the analysis steps.
 
 
+**IMPORTANT FOR REVIEWERS**
+
+You will have to point the function`get.analyses()` to where you downloaded these files:     
+
+`ML2_RawData_S1.rds`    
+`ML2_RawData_S2.rds`     
+
+The script will assume the data are in a subdirectory of a rootdirectory given by the arguments:
+```{r echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+rootdir = "YOUR PATHNAME TO DATAFILES ROOTDIR"
+
+indir = list(RAW.DATA   = "DIRECTORY IN YOUR rootdir CONTAINING DATAFILES",
+             MASTERKEY  = "", 
+             SOURCEINFO = "")
+```
+
+
+```{r, echo=FALSE}
+MyRootDir    <- "~/Documents/GitHub/manylabRs/"
+MyRawDataDir <- "random3rd"
+```
+
+
 The example below runs a global analysis for `Huang.1`
 ```{r}
-library(manylabRs)
-library(tidyverse)
-
-df <- get.analyses(studies = 1, analysis.type = 1)
+df <- get.analyses(studies       = 1, 
+                   analysis.type = 1, 
+                   rootdir       = MyRootDir,
+                   indir = list(RAW.DATA   = MyRawDataDir, 
+                                MASTERKEY  = "", 
+                                SOURCEINFO = ""))
 ```
 
 The object `df` contains two named lists:^[the names correspond to the analysis name in the `masteRkey`]

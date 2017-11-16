@@ -18,17 +18,18 @@ gg.theme(type = c("clean", "noax"), useArial = FALSE,
 A theme for \code{ggplot2}.
 }
 \description{
-gg.theme
+A gg theme
 }
 \details{
 Will generate a \code{clean} ggplot theme, or a theme without any axes (\code{noax}).
 
 Some scientific journals explicitly request the Arial font should be used in figures.
-This can be achieved by using \code{.afm} font format (see, e.g. http://www.pure-mac.com/font.html).
+This can be achieved by using \code{.afm} font format (see, e.g. \url{http://www.pure-mac.com/font.html}).
 }
 \examples{
 library(ggplot2)
 g <- ggplot(data.frame(x = rnorm(n = 100), y = rnorm(n = 100)), aes(x = x, y = y)) + geom_point()
 g + gg.theme()
 g + gg.theme("noax")
+
 }

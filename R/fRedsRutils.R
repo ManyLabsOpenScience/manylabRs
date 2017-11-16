@@ -1,15 +1,19 @@
 #' gg.theme
 #'
+#' A gg theme
+#'
 #' @param type One of \code{clean}, or \code{noax}
 #' @param useArial Use the Arial font (requires \code{.afm} font files in the \code{afmPath})
 #' @param afmPATH Path to Arial \code{.afm} font files.
 #'
+#'
 #' @details Will generate a \code{clean} ggplot theme, or a theme without any axes (\code{noax}).
 #'
 #' Some scientific journals explicitly request the Arial font should be used in figures.
-#' This can be achieved by using \code{.afm} font format (see, e.g. http://www.pure-mac.com/font.html).
+#' This can be achieved by using \code{.afm} font format (see, e.g. \url{http://www.pure-mac.com/font.html}).
 #'
 #' @return A theme for \code{ggplot2}.
+#'
 #' @export
 #'
 #' @examples
@@ -17,6 +21,7 @@
 #' g <- ggplot(data.frame(x = rnorm(n = 100), y = rnorm(n = 100)), aes(x = x, y = y)) + geom_point()
 #' g + gg.theme()
 #' g + gg.theme("noax")
+#'
 gg.theme <- function(type=c("clean","noax"),useArial = FALSE, afmPATH="~/Dropbox"){
 
   if(length(type)>1){type <- type[1]}
@@ -101,7 +106,6 @@ gg.plotHolder <- function(useArial = F,afmPATH="~/Dropbox"){
           panel.background = element_blank()
     )
 }
-
 
 #' fill_viol
 #'
@@ -360,295 +364,12 @@ swarmPlot <- function(df, anonymous=FALSE, addSize=FALSE, addMedian=TRUE, addGlo
 
 }
 
-#' #' splitViolin
-#' #'
-#' #' @param ... internal
-#' #'
-#' #' @return
-#' #' @export
-#' #'
-#' splitViolin <- function(...){
-#'
-#'   dir.in   <- "~/Dropbox/Manylabs2/TestOutput/RESULTS.RDS/"
-#'   outlist1 <- rio::import(paste0(dir.in,"Data_Figures_Primary.rds"))
-#'   outlist2 <- rio::import(paste0(dir.in,"Data_Figures_Secondary.rds"))
-#'   outlistG <- rio::import(paste0(dir.in,"Data_Figures_Global.rds"))
-#'
-#'   oriEffects <- get.GoogleSheet(data='ML2masteRkey')$df
-#'   oriEffects$source.WEIRD <- NA
-#'
-#'   WEIRDori <-oriEffects$orig.sample.nation%in%c("Australia","Austria","Canada","France","Germany","Hungary","Italy","New Zealand","Poland","Portugal","Serbia","Spain","Sweden", "The Netherlands","Netherlands","UK","USA","US","US & Canada","Various (mainly US, GB and Canada).")
-#'
-#'   MIX <-oriEffects$orig.sample.nation%in%c("US & India","US & Japan","MTurk", "US & Hong Kong")
-#'
-#'   nonWEIRDori <- !WEIRDori&!MIX
-#'
-#'   oriEffects$source.WEIRD[MIX]          <- 3
-#'   oriEffects$source.WEIRD[nonWEIRDori]  <- 2
-#'   oriEffects$source.WEIRD[WEIRDori]     <- 1
-#'
-#'   # df$source.WEIRD.f <- factor(df$source.WEIRD,
-#'   #                             levels = c(0,1,2),
-#'   #                             labels = c("USA","WEIRD","non-WEIRD"))
-#'
-#'   oriEffects$source.WEIRD.f <- factor(oriEffects$source.WEIRD,
-#'                                       levels = c(1,2,3),
-#'                                       labels = c("WEIRD","non-WEIRD","Mixed"))
-#'
-#'   df<-outlist1
-#'
-#'   df$labels <- df$.id
-#'   df$meanES <- ldply(unique(df$.id), function(r) rep(mean(df$ESCI.r[df$.id==r], na.rm = TRUE)))
-#'   df        <- dplyr::arrange(df, meanES)
-#'
-#'   dfG <- summarise(group_by(df,.id),
-#'                    y= median(ESCI.r,na.rm = T),
-#'                    ymin=mean(ESCI.l.r, na.rm = T),
-#'                    ymax=mean(ESCI.u.r, na.rm = T))
-#'
-#'   dfG   <- arrange(dfG, y)
-#'
-#'   dfAg <- aggregate(ESCI.r ~ .id, df, mean)
-#'
-#'   df$labels   <- factor(df$.id, levels = dfAg[order(dfAg$ESCI.r), ".id"])
-#'   df$sigf <- "p > .05"
-#'   df$sigf[df$test.p.value<.05] <- "p < .05"
-#'   df$sigf.f <- factor(df$sigf)
-#'
-#'   df$sigf.f <- relevel(df$sigf.f, ref = "p > .05")
-#'   df$USA <- "non-USA"
-#'   df$USA[df$source.Country=="USA"] <- "USA"
-#'
-#'   myCols <- brewer.pal(11,"RdYlBu")[c(1,6,11)]
-#'   myCols <- c("#d73027","#4575b4","#5aae61")
-#'
-#'   WEIRD <- df$source.Country%in%c("Australia","Austria","Canada","France","Germany","Hungary","Italy","New Zealand","Poland","Portugal","Serbia","Spain","Sweden", "The Netherlands","UK","USA")
-#'
-#'   nonWEIRD <- !WEIRD
-#'
-#'   df$source.WEIRD                           <- 2
-#'   df$source.WEIRD[WEIRD]                    <- 1
-#'
-#'   df$source.WEIRD.f <- factor(df$source.WEIRD,
-#'                               levels = c(1,2),
-#'                               labels = c("WEIRD","non-WEIRD"))
-#'
-#'   df$meanES <- ldply(unique(df$labels),
-#'                      function(r) cbind(rep(mean(df$ESCI.r[df$labels==r], na.rm = TRUE),
-#'                                            sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
-#'
-#'   df <- arrange(df, meanES)
-#'
-#'   df$splitv <- df$source.WEIRD.f
-#'
-#'   #Get the group levels for the split variable
-#'
-#'   splits = unique(df[['splitv']])
-#'
-#'   # Calculate and scale group densities
-#'   #
-#'   # I'm rescaling the density curves so that they all have the same peak height and don't overlap. Edit the mutate() line if you want to have the density polygons be different sizes (e.g., scaled so that they show the relative amount of data in each group).
-#'
-#'   tblF <- summarise(group_by(df, labels, splitv),
-#'                     N = n())
-#'   nnames <- tblF$labels[tblF$N==1]
-#'   ssplitv  <- tblF$splitv[tblF$N==1]
-#'
-#'   for(c in seq_along(nnames)){
-#'     df[nrow(df)+1,] <- df[df$labels%in%nnames[c]&df$splitv%in%ssplitv[c],]
-#'   }
-#'
-#'   pdat = df %>%
-#'     group_by(labels, splitv) %>%
-#'     do(tidy(density(.[['ESCI.r']]))) %>%
-#'     rename(loc = x, dens = y) %>%
-#'     mutate(dens = 0.5 * dens / max(dens)) %>%
-#'     ungroup()
-#'
-#'   # Calculate summary statistics in a separate dataframe
-#'   #
-#'   # If you need more summary statistics, add new variables to the summarise() call here, and add the additional variable names to the gather() call.
-#'
-#'   sums = df %>%
-#'     group_by(labels, splitv, source.name) %>%
-#'     summarise(sample_loc = first(ESCI.r)) %>%
-#'     ungroup() %>%
-#'     gather(segment, loc_sum, sample_loc)
-#'
-#'   means = df %>%
-#'     group_by(labels, splitv) %>%
-#'     summarise(mean_loc = median(ESCI.r, na.rm = T)) %>%
-#'     ungroup() %>%
-#'     gather(segment, loc_sum, mean_loc)
-#'
-#'   # Calculate the corresponding points on each group's density curve
-#'   #
-#'   # To do this, I'm taking the scaled density curves stored in pdat, then feeding them into the approx() function, plus the y-axis locations of the summary statistics (loc_sum), to get the corresponding x-axis values for the summary statistics.
-#'
-#'   sums = left_join(pdat, sums, by=c('labels', 'splitv')) %>%
-#'     group_by(labels, splitv, source.name) %>%
-#'     do(data.frame(loc     = unique(.$loc_sum),
-#'                   dens = approx(.$loc, .$dens, unique(.$loc_sum))[['y']])) %>%
-#'     ungroup()
-#'
-#'   means = left_join(pdat, means, by=c('labels', 'splitv')) %>%
-#'     group_by(labels, splitv) %>%
-#'     do(data.frame(loc     = unique(.$loc_sum),
-#'                   dens = approx(.$loc, .$dens, unique(.$loc_sum))[['y']])) %>%
-#'     ungroup()
-#'
-#'   pdat <- arrange(pdat, sort)
-#'
-#'   #Create a vector of offsets with each x-axis group's coordinate
-#'
-#'   offsets = unique(df[['labels']]) %>% {setNames(0:(length(.) - 1), .)}
-#'
-#'   # Offset the densities and summary statistics
-#'   #
-#'   # Modify pdat and sums to add offset_dens columns, which are the density curve values offset by the x-axis group. Also, for the groups that are on the left side of the split violins, invert the densities.
-#'
-#'   pdat = pdat %>%
-#'     mutate(offset_dens = offsets[.[['labels']]] + ifelse(.[['splitv']] == splits[1], -dens, dens))
-#'
-#'   means = means %>%
-#'     mutate(offset = offsets[.[['labels']]],
-#'            offset_dens = offset + ifelse(.[['splitv']] == splits[1], -dens, dens))
-#'
-#'   means$oriES <- NA
-#'   means$oriWEIRD <- NA
-#'   means$oriWEIRD.f <- NA
-#'   for(n in seq_along(means$labels)){
-#'     means$oriES[n]  <-  oriEffects$orig.ES.r[na.exclude(oriEffects$study.analysis)%in%means$labels[n]] %||% NA
-#'     if(means$splitv[n]%in%"WEIRD"&oriEffects$source.WEIRD[na.exclude(oriEffects$study.analysis)%in%means$labels[n]]==1){
-#'       means$oriWEIRD[n]  <- "WEIRD"
-#'     }
-#'     if(means$splitv[n]%in%"non-WEIRD"&oriEffects$source.WEIRD[na.exclude(oriEffects$study.analysis)%in%means$labels[n]]==2){
-#'       means$oriWEIRD[n]  <- "non-WEIRD"
-#'     }
-#'   }
-#'
-#'   sums = sums %>%
-#'     mutate(offset = offsets[.[['labels']]],
-#'            offset_dens = offset + ifelse(.[['splitv']] == splits[1], -dens, dens),
-#'            offset_fix  = offset + ifelse(.[['splitv']] == splits[1], -.2, .2))
-#'
-#'   sums$offset_densN <- NA
-#'   for(smpl in unique(df$source.name)){
-#'     tblN <- df[df$source.name%in%smpl,c('labels','ESCI.N.total')]
-#'     for(l in unique(tblN$labels)){
-#'       sums$offset_densN[sums$source.name%in%smpl&sums$labels%in%l] <- tblN$ESCI.N.total[tblN$labels==l]
-#'     }
-#'   }
-#'
-#'   sums$tsize <- sums$offset + ifelse(sums$splitv == splits[1],-.2, .2)
-#'
-#'   lablocs <- (summarise(group_by(sums,labels),
-#'                         labloc = max(offset,na.rm = TRUE)))
-#'
-#'   lablocs$oriES  <- NA
-#'   lablocs$globES <- NA
-#'   lablocs$meanES <- NA
-#'   lablocs$oriWEIRD  <- NA
-#'
-#'   for(n in seq_along(lablocs$labels)){
-#'     lablocs$oriES[n]  <-  oriEffects$orig.ES.r[na.exclude(oriEffects$study.analysis)%in%lablocs$labels[n]] %||% NA
-#'     lablocs$globES[n] <-  unique(df$GlobalES[df$labels%in%lablocs$labels[n]])
-#'     lablocs$meanES[n] <-  unique(df$meanES[df$labels%in%lablocs$labels[n]])
-#'     lablocs$oriWEIRD[n] <-  as.character(oriEffects$source.WEIRD.f[na.exclude(oriEffects$study.analysis)%in%lablocs$labels[n]]) %||% NA
-#'   }
-#'
-#'   lablocs$globES[is.na(lablocs$globES)] <- 0
-#'
-#'   # lablocs <- lablocs %>%
-#'   #   mutate(offset = offsets[.[['labels']]],
-#'   #          offset_dens = offset + ifelse(.[['splitv']] == splits[1], -dens, dens),
-#'
-#'   #Colorblindsafe colors
-#'   cwhite = "#f7f7f7"
-#'   ccream = "#2166ac"
-#'   cblank = "#d1e5f0"
-#'   corange = "#f4a582"
-#'   cblue  = "#2166ac"
-#'   cblueL = "#d1e5f0"
-#'   cred   = "#d6604d"
-#'   credL  = "#f7f7f7"
-#'   cpurp  = "#b2abd2"
-#'
-#'   mypalette <- c(cred,cblue)
-#'
-#'
-#'   pdat$offset_dens[pdat$labels==unique(df$labels)[n]]
-#'
-#'   dfSum <- gather(lablocs, key = EStype, value = ES, oriES, globES, meanES)
-#'   dfSum$EStype.f <- factor(dfSum$EStype, levels = c("oriES","globES","meanES"), labels = c("Original ES","ES of Grand Mean", "Mean ES of Samples"))
-#'   dfSumS <- dfSum[dfSum$EStype=="oriES",]
-#'
-#'   outdir <- "/Users/Fred/Dropbox/Manylabs2/Figures"
-#'
-#'
-#'   wd = 8
-#'   hg = 10
-#'
-#'   pdat$splitv <- relevel(pdat$splitv, ref = "non-WEIRD")
-#'   # dfSumS$oriWEIRD <- factor(dfSumS$oriWEIRD, levels = c("non-WEIRD","WEIRD","Mixed"))
-#'   # dfSumS$oriWEIRD <- relevel(dfSumS$oriWEIRD, ref = "non-WEIRD")
-#'
-#'   #sums$tsize.s<-rescale(sums$tsize,to=c(-.5,.5)
-#'
-#'   oriWEIRD <- means[!is.na(means$oriWEIRD),]
-#'
-#'   oriWEIRD$oriWEIRD.f <- "Original"
-#'
-#'   cols <- c("non-WEIRD" = cred, "WEIRD" = cblue, "Original"="#5aae61")
-#'
-#'   #Plot
-#'   library(scales)
-#'   g <- ggplot(pdat, aes(offset_dens, loc, group = interaction(pdat[['labels']], pdat[['splitv']])), colour = splitv) +
-#'     geom_hline(yintercept = 0, color = "grey60") +
-#'     geom_path(size=1, alpha = .5, color = "grey60")+
-#'     geom_path(aes(colour=splitv)) +
-#'     geom_segment(data=sums, aes(x = offset, y = loc, xend = tsize, yend = loc, colour = splitv),
-#'                  inherit.aes=FALSE, alpha=.7, size=.2) +
-#'     geom_segment(data=means, aes(x = offset, y = loc, xend = offset_dens, yend = loc, colour =  splitv),
-#'                  inherit.aes=FALSE, size=.8, alpha=1) +
-#'     #geom_segment(data=oriWEIRD, aes(x = offset, y = oriES, xend = offset_dens, yend = oriES, colour = oriWEIRD.f),inherit.aes=FALSE, size=.8, alpha=.7) +
-#'     geom_point(data=oriWEIRD, aes(x = offset, y = oriES), shape = 19 ,inherit.aes=FALSE, size=2, alpha=.7, colour="#5aae61") +
-#'     scale_x_continuous(name = '', breaks = unname(offsets), labels = names(offsets)) +
-#'     scale_colour_manual('ES Distribution',values = cols) +
-#'     #scale_fill_manual('ES Distribution',values = c("#d1e5f0","#f4a582")) +
-#'     scale_shape_manual('Original ES',values = c(73,19,17)) +
-#'     ylim(-1,1)+
-#'     ylab('Effect Size r') +  theme_minimal() +
-#'     theme(legend.position = "top",
-#'           legend.background  =element_rect(),
-#'           panel.grid.major.y =element_line(colour="grey60"),
-#'           panel.grid.major.x =element_blank(),
-#'           panel.grid.minor.x =element_blank()) +
-#'     coord_flip()
-#'   g
-#' }
-
-
-# set.Arial <- function(afmPATH="~/Dropbox"){
-#   # Set up PDF device on MAC OSX to use Arial as a font in Graphs
-#   if(nchar(afmPATH>0)){
-#     if(file.exists(paste0(afmPATH,"/Arial.afm"))){
-#       Arial <- Type1Font("Arial",
-#                          c(paste(afmPATH,"/Arial.afm",sep=""),
-#                            paste(afmPATH,"/Arial Bold.afm",sep=""),
-#                            paste(afmPATH,"/Arial Italic.afm",sep=""),
-#                            paste(afmPATH,"/Arial Bold Italic.afm",sep="")))
-#       if(!"Arial" %in% names(pdfFonts())){pdfFonts(Arial=Arial)}
-#       if(!"Arial" %in% names(postscriptFonts())){postscriptFonts(Arial=Arial)}
-#       return()
-#     } else {disp(header='useArial=TRUE',message='The directory did not contain the *.afm version of the Arial font family')}
-#   } else {disp(header='useArial=TRUE',message='Please provide the path to the *.afm version of the Arial font family')}
-# }
-
 #' get.plotly
 #'
-#' @param data Dataframe with ML2 testresutls and ESCI output.
+#' Get a plotly plot.
 #'
+#' @param data Dataframe with ML2 testresutls and ESCI output.
+#' @param analysis_url url
 #'
 #' @export
 #'
@@ -1514,6 +1235,7 @@ tidyDF <- function(df){
 #' Catch *and* save both errors and warnings, and in the case of
 #' a warning, also keep the computed result.
 #'
+#' @export
 #' @param expr an \R expression to evaluate
 #' @return a list with 'value' and 'warning', where value' may be an error caught.
 #' @author Martin Maechler;
@@ -1725,6 +1447,7 @@ testScript <- function(studies,
 #' @param runningGroup The group on which the statistics in `describe` were calculated (can be: 'all', a source name, or a presentation order)
 #' @param runningAnalysis The analysis that generated the statistics in `describe`
 #'
+#' @export
 #'
 #' @author
 #' Fred Hasselman

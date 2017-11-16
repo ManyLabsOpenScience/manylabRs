@@ -1,18 +1,36 @@
-## ----echo=FALSE----------------------------------------------------------
+## ----setup, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE------
+knitr::opts_chunk$set(tidy=FALSE)
 require(manylabRs)
 library(reshape2)
 library(plyr)
 library(broom)
+library(tidyverse)
 
 ## ---- eval=FALSE---------------------------------------------------------
 #  library(devtools)
 #  install_github("ManyLabsOpenScience/manylabRs")
+#  library(manylabRs)
+#  library(tidyverse)
+#  library(broom)
+
+## ----echo=TRUE, message=FALSE, warning=FALSE, include=FALSE--------------
+rootdir = "YOUR PATHNAME TO DATAFILES ROOTDIR"
+
+indir = list(RAW.DATA   = "DIRECTORY IN YOUR rootdir CONTAINING DATAFILES",
+             MASTERKEY  = "", 
+             SOURCEINFO = "")
+
+## ---- echo=FALSE---------------------------------------------------------
+MyRootDir    <- "~/Documents/GitHub/manylabRs/"
+MyRawDataDir <- "random3rd"
 
 ## ------------------------------------------------------------------------
-library(manylabRs)
-library(tidyverse)
-
-df <- get.analyses(studies = 1, analysis.type = 1)
+df <- get.analyses(studies       = 1, 
+                   analysis.type = 1, 
+                   rootdir       = MyRootDir,
+                   indir = list(RAW.DATA   = MyRawDataDir, 
+                                MASTERKEY  = "", 
+                                SOURCEINFO = ""))
 
 ## ------------------------------------------------------------------------
 head(tbl_df(df$raw.case$Huang.1))

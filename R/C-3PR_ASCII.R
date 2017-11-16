@@ -692,15 +692,23 @@ get.analyses <- function(studies       = NA,
                          Nmin.raw  = 30,
                          Nmin.cond = 15,
                          subset    = c("all","WEIRD","NON-WEIRD")[1],
-                         rootdir   = "~/Dropbox/Manylabs2/TestOutput",
-                         indir     = list(RAW.DATA = "RAW.DATA.PRIVATE",MASTERKEY = "",SOURCEINFO = ""),
-                         outdir    = list(ROBJECTS    = "ROBJECTS",RESULTS.RDS = "RESULTS.RDS")){
+                         rootdir   =normalizePath(paste0(find.package("manylabRs"),"/data")),
+                         indir     = list(RAW.DATA = "RAW.DATA.PRIVATE",MASTERKEY = "MASTERKEY", SOURCEINFO = "SOURCEINFO"),
+                         outdir    = list(ROBJECTS = "ROBJECTS",RESULTS.RDS = "RESULTS.RDS"),
+                         onlineTables = TRUE){
+
+
+  paths <- unique(c(paste0(rootdir,"/",indir), paste0(rootdir,"/",outdir)))
+  for(d in paths[!dir.exists(paths)]){
+    dir.create(d, showWarnings = TRUE, recursive = FALSE, mode = "0777")
+  }
 
   tp  <- analysis.type
   wop <- options(warn=-1, expressions=10000)
 
   # Load Key Table
-  if(indir$MASTERKEY==""){
+
+  if(indir$MASTERKEY==""|onlineTables){
     ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
     disp(paste("Downloaded keytable Googlesheet: ML2_masteRkey [https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/]"), header = "get.analyses", footer = FALSE)
   } else {
@@ -711,9 +719,9 @@ get.analyses <- function(studies       = NA,
   ML2.key <- ML2.key[!is.na(ML2.key$unique.id),]
 
   # Load data
-  if(indir$RAW.DATA==""){
+  if(indir$RAW.DATA==""|onlineTables){
     ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
-    disp(paste("Downloaded data from OSF: 'ML2_RawData_S1.rds' and 'ML2_RawData_S1.rds'"), header = FALSE, footer = FALSE)
+    disp(paste("Downloaded data from OSF: 'ML2_RawData_S1.rds' and 'ML2_RawData_S2.rds'"), header = FALSE, footer = FALSE)
   } else {
     ML2.S1 <- readRDS(file.path(rootdir,indir$RAW.DATA,"ML2_RawData_S1.rds"))
     ML2.S2 <- readRDS(file.path(rootdir,indir$RAW.DATA,"ML2_RawData_S2.rds"))
@@ -721,7 +729,7 @@ get.analyses <- function(studies       = NA,
   }
 
   # Load information about sources
-  if(indir$SOURCEINFO==""){
+  if(indir$SOURCEINFO==""|onlineTables){
     SourceInfoTable    <- get.GoogleSheet(url = "https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/pub?gid=1435507167&single=true&output=csv")$df
     disp(paste("Downloaded information about the data sources from Googlesheet: 'ML2_SourceInfo.xlsx' [https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/]"), header = FALSE, footer = FALSE)
   } else {
