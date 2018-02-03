@@ -9,7 +9,8 @@ Authors@R: c(person("Fred", "Hasselman", email = "f.hasselman@bsi.ru.nl", role =
             person("Brian", "Nosek", email = "", role = c("ctb", "pdr")))
 Maintainer: Fred Hasselman <f.hasselman@bsi.ru.nl>
 Description: Code and data from the ManyLabs projects. ML1: [Investigating Variation in Replicability](https://osf.io/wx7ck/); ML2: [Investigating Variation in Replicability Across Sample and Setting](https://osf.io/8cd4r/).
-License: GPL-3
+Depends: R (>= 2.10)
+License: GPL-3 + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
@@ -17,9 +18,34 @@ Imports:
     broom,
     plyr,
     reshape2,
-    tidyverse 
+    tidyverse,
+    cowplot,
+    gridExtra,
+    lattice,
+    latticeExtra,
+    lubridate,
+    magrittr,
+    Matrix,
+    parallel,
+    scales,
+    car,
+    compute.es,
+    downloader,
+    exact2x2,
+    httr,
+    lme4,
+    lmerTest,
+    MBESS,
+    metafor,
+    RCurl,
+    openxlsx
 RoxygenNote: 6.0.1
-Suggests: 
+Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    devtools,
+    graphics,
+    grDevices,
+    stats,
+    utils
 VignetteBuilder: knitr

@@ -6,19 +6,36 @@
 \usage{
 get.analyses(studies = NA, analysis.type = NA, Nmin.raw = 30,
   Nmin.cond = 15, subset = c("all", "WEIRD", "NON-WEIRD")[1],
-  rootdir = normalizePath(paste0(find.package("manylabRs"), "/data")),
-  indir = list(RAW.DATA = "RAW.DATA.PRIVATE", MASTERKEY = "MASTERKEY",
-  SOURCEINFO = "SOURCEINFO"), outdir = list(ROBJECTS = "ROBJECTS", RESULTS.RDS
-  = "RESULTS.RDS"), onlineTables = TRUE)
+  onlineTables = TRUE, staticData = FALSE,
+  rootdir = normalizePath(paste0(find.package("manylabRs"), ifelse(staticData,
+  "/static_data", "/data"))), data.names = list(Slate1 = ifelse(staticData,
+  "ML2_Rawdata_S1_RData", "ML2.S1"), Slate2 = ifelse(staticData,
+  "ML2_Rawdata_S2_RData", "ML2.S2")), indir = list(RAW.DATA =
+  ifelse(staticData, "RAW.DATA.PRIVATE", ""), MASTERKEY = ifelse(onlineTables,
+  "", "MASTERKEY"), SOURCEINFO = ifelse(onlineTables, "", "SOURCEINFO")),
+  outdir = list(ROBJECTS = "ROBJECTS", RESULTS.RDS = "RESULTS.RDS"))
 }
 \arguments{
-\item{studies}{Numeric vector with unique study IDs listed in the `masteRkey` table (default = all IDs).}
+\item{studies}{Numeric vector with unique study IDs listed in the `masteRkey` table (default = all IDs).
+@param analysis.type An optional number indicating Global (1), Primary (2, default) or Secondary (3) analyses.}
 
 \item{Nmin.raw}{Minimum raw sample size allowed to be included in the analyses.}
 
 \item{Nmin.cond}{Minimum sample size per condition allowed to be included in the analyses.}
 
-\item{tp}{An optional number indicating Global (1), Primary (2, default) or Secondary (3) analyses.}
+\item{subset}{Can be "all","WEIRD" or "NON-WEIRD"}
+
+\item{onlineTables}{Download most recent online versions of \code{masteRkey} and \code{Source} information.}
+
+\item{staticData}{Use data from external directory (see argument \code{indir})}
+
+\item{rootdir}{which dir to look for data and files}
+
+\item{data.names}{names of the datafiles for slate 1 and slate 2 (change e.g. if you study a custom subsample)}
+
+\item{indir}{List of directories to use for different files. Change if you have files in different locations, but keep the list structure!}
+
+\item{outdir}{List of directories to use for outputting different result files. Change if you want to save in a different location, but keep the list structure!}
 }
 \value{
 A list object with analysis results.

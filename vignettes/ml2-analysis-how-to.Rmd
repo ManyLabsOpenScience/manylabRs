@@ -5,17 +5,15 @@ date: "24 October 2015"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Data analysis how-to}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 knitr::opts_chunk$set(tidy=FALSE)
 require(manylabRs)
-library(reshape2)
-library(plyr)
-library(broom)
-library(tidyverse)
 ```
 
 # Analysis Strategy
@@ -70,8 +68,6 @@ Use the code below to install the `manylabRs` package directly from [GitHub](htt
 library(devtools)
 install_github("ManyLabsOpenScience/manylabRs")
 library(manylabRs)
-library(tidyverse)
-library(broom)
 ```
 
 ### Download tarball from GitHub
@@ -112,6 +108,8 @@ indir = list(RAW.DATA   = "DIRECTORY IN YOUR rootdir CONTAINING DATAFILES",
 ```{r, echo=FALSE}
 MyRootDir    <- "~/Documents/GitHub/manylabRs/"
 MyRawDataDir <- "random3rd"
+data.names   <- list(Slate1 = "ML2.Slate1.Random3rdDE.rds",
+                     Slate2 = "ML2.Slate2.Random3rdDE.rds")
 ```
 
 
@@ -120,6 +118,7 @@ The example below runs a global analysis for `Huang.1`
 df <- get.analyses(studies       = 1, 
                    analysis.type = 1, 
                    rootdir       = MyRootDir,
+                   data.names    = data.names,  
                    indir = list(RAW.DATA   = MyRawDataDir, 
                                 MASTERKEY  = "", 
                                 SOURCEINFO = ""))
@@ -132,6 +131,7 @@ The object `df` contains two named lists:^[the names correspond to the analysis 
 This list contains dataframes with the relevant variables for each analysis, but before the analysis specific variable functions (`vafun`) are applied. There is a Boolean variable `case.include` which indicates whther a case is valid and should be included for analysis.
 
 ```{r}
+library(dplyr)
 head(tbl_df(df$raw.case$Huang.1))
 ```
 
@@ -217,7 +217,7 @@ vars   <- eval(parse(text=paste0(masteRkeyInfo$stat.vars,'(df.split)',collapse="
 
 
 ```{r step 3}
-# Get the paramers the parameters to use for the statistical analysis
+# Get the parameters to use for the statistical analysis
 stat.params <<- analysisInfo$stat.params
 
 # Run the analysis listed in masteRkey column 'stat.test' usinf the data vectors in 'vars'

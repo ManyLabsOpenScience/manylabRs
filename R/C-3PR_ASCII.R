@@ -1,3 +1,6 @@
+#' @importFrom magrittr %>%
+NULL
+
 # Data Cleaning functions  ------------------
 
 clean.Source <- function(source.raw, SourceTable){
@@ -61,7 +64,7 @@ scanColumns <- function(pattern, data){
       cat('Error in column: ', colnames(data)[c],'->\t',paste0(tmp$warning),'\n')
     }
   }
-  idD   <- ldply(idS)
+  idD   <- plyr::ldply(idS)
   cs    <- rowSums(idD)
   colID <- which(cs>0)
   idS   <- t(idD[colID, ])
@@ -116,7 +119,7 @@ clean.ML2fieldsNA <- function(source.raw, pattern="(test|-99)", S1 = TRUE, ps = 
   }
 
   # Remove the test sessions
-  source.clean <- source.raw %>% filter(Finished == 1)
+  source.clean <- source.raw %>% dplyr::filter(Finished == 1)
 
   # Now look for '-99'
   disp(message = 'Checking all columns except "LocationLongitude" for pattern: "-99"',
@@ -145,7 +148,7 @@ get.chain <- function(inf){
 
   # include sites
   filt.site <- paste0(" %>% dplyr::filter(",paste0(inf$study.sites.include),")")
-  #filt.site <- paste0(" %>% filter(is.character(.id))")
+  #filt.site <- paste0(" %>% dplyr::filter(is.character(.id))")
 
   # Data frame filter
   filt.df <- paste0(" %>% dplyr::select(", paste0(inf$id.vars,collapse=","),")", filt.site)
@@ -181,14 +184,14 @@ get.cases <- function(rule,study.vars,study.vars.labels,stat.params){
   filtvars <- study.vars.labels[names(study.vars.labels)%in%rule[r,1]]
 
   # Start with 'pre'
-  pre <-llply(unlist(filtvars), function(v){paste0(v,' %>% filter(')})
+  pre <-plyr::llply(unlist(filtvars), function(v){paste0(v,' %>% dplyr::filter(')})
 
   if(type == "each"){
 
     if(all(filtvars[[1]]%in%names(study.vars))){
       filtvars <- study.vars
-      do <- laply(seq_along(filtvars),
-                  function(v) laply(seq_along(filtvars[[v]]),
+      do <- plyr::laply(seq_along(filtvars),
+                  function(v) plyr::laply(seq_along(filtvars[[v]]),
                                     function(vv) paste0(gsub("X", filtvars[[v]][vv],rule[r,2]),
                                                         gsub("X",filtvars[[v]][vv], isna)))
       )
@@ -200,19 +203,19 @@ get.cases <- function(rule,study.vars,study.vars.labels,stat.params){
       s <- ncol(do)
       for(r in 2:Nrule){
         filtvars <- unlist(study.vars.labels[names(study.vars.labels)%in%rule[r,1]])
-        do  <- cbind(do, laply(seq_along(filtvars),
+        do  <- cbind(do, plyr::laply(seq_along(filtvars),
                                function(vv) paste0(gsub("X",filtvars[[vv]],rule[r,2]))))
       }
     }
-    case <- llply(seq_along(pre), function(fr) paste0(pre[[fr]], paste0(do[fr, ],collapse = ' & '),")"))
+    case <- plyr::llply(seq_along(pre), function(fr) paste0(pre[[fr]], paste0(do[fr, ],collapse = ' & '),")"))
     names(case) <- names(study.vars)
   }
 
   if(type == "sep"){
     if(all(filtvars[[1]]%in%names(study.vars))){
       filtvars <- study.vars
-      do <- llply(seq_along(filtvars),
-                  function(v) laply(seq_along(filtvars[[v]]),
+      do <- plyr::llply(seq_along(filtvars),
+                  function(v) plyr::laply(seq_along(filtvars[[v]]),
                                     function(vv) paste0(gsub("X",filtvars[[v]][vv],rule[r,2]),
                                                         gsub("X",filtvars[[v]][vv],isna)))
       )
@@ -224,14 +227,14 @@ get.cases <- function(rule,study.vars,study.vars.labels,stat.params){
       for(r in 2:Nrule){
         if(rule[r,1]%in%names(do)){
           filtvars <- unlist(study.vars.labels[names(study.vars.labels)%in%rule[r,1]])
-          do[[r]] <- c(do[[r]], laply(seq_along(filtvars),
+          do[[r]] <- c(do[[r]], plyr::laply(seq_along(filtvars),
                                       function(vv) paste0(gsub("X",filtvars[[vv]],rule[r,2])))
           )
         }
       }
     }
 
-    case <- llply(seq_along(pre), function(fr) paste0(pre[[fr]], paste0(do[[fr]],collapse = ' & '),")"))
+    case <- plyr::llply(seq_along(pre), function(fr) paste0(pre[[fr]], paste0(do[[fr]],collapse = ' & '),")"))
     names(case) <- names(study.vars)
   }
 
@@ -253,7 +256,7 @@ get.info <- function(keytable,cols, subset){
   study.vars.labels  <- eval(parse(text=keytable[,'study.vars.labels']))
   cases.include      <- eval(parse(text=keytable[,'study.cases.include']))
   stat.params        <- eval(parse(text=keytable[,'stat.params']))
-  #cases <- llply(seq_along(cases.include),function(i) get.cases(cases.include[i],study.vars,study.vars.labels,stat.params))
+  #cases <- plyr::llply(seq_along(cases.include),function(i) get.cases(cases.include[i],study.vars,study.vars.labels,stat.params))
   cases              <- get.cases(cases.include, study.vars, study.vars.labels, stat.params)
   sites.include      <- eval(parse(text=keytable[,'study.sites.include']))
   if(sites.include[[1]][1]=="all"){sites.include[[1]]<-'is.character(source)'}
@@ -293,7 +296,7 @@ get.sourceData <- function(ML2.id,ML2.df,ML2.in){
   for(i in seq_along(ML2.in$study.vars)){
     dfname[i] <- names(ML2.in$study.vars)[[i]]
     eval(parse(text=paste0(names(ML2.in$study.vars)[[i]],
-                           " <- tbl_df(dplyr::select(ML2.df,",
+                           " <- dplyr::tbl_df(dplyr::select(ML2.df,",
                            paste0(c(ML2.in$study.vars[[i]],'uID'), collapse=","),"))"))
     )
 
@@ -407,27 +410,27 @@ get.sourceData <- function(ML2.id,ML2.df,ML2.in){
 #     dev.off()
 #
 #     colnames(bs)[4] <- "labels"
-#     #laply(unique(df$analysis), function(r) strsplit(x = r, split = "[.]")[[1]][1])
+#     #plyr::laply(unique(df$analysis), function(r) strsplit(x = r, split = "[.]")[[1]][1])
 #
 #     df <- data.frame(df,bs)
 #     se <- function(x){sqrt(var(x,na.rm=TRUE)/length(na.omit(x)))}
 #
-#     df$meanES <- ldply(unique(df$labels),
+#     df$meanES <- plyr::ldply(unique(df$labels),
 #                        function(r) cbind(rep(mean(df$y[df$labels==r], na.rm = TRUE),
 #                                              sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
-#     df$seES <- ldply(unique(df$labels),
+#     df$seES <- plyr::ldply(unique(df$labels),
 #                      function(r) cbind(rep(se(df$y[df$labels==r]),
 #                                            sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
 #
 #     #df    <- df[order(df$meanES, decreasing = F), ]
 #     df <- arrange(df, meanES)
 #
-#     df$xx <- ldply(unique(df$labels),
+#     df$xx <- plyr::ldply(unique(df$labels),
 #                    function(r) cbind(scale(df$x[df$labels==r], scale = F)))[,1]
-#     df$xf <- ldply(seq_along(unique(df$labels)),
+#     df$xf <- plyr::ldply(seq_along(unique(df$labels)),
 #                    function(r) cbind(df$xx[df$labels==unique(df$labels)[r]] +
 #                                          seq(10,10*length(unique(df$labels)), by=10)[r]))[,1]
-#     df$xn <- ldply(seq_along(unique(df$labels)),
+#     df$xn <- plyr::ldply(seq_along(unique(df$labels)),
 #                    function(r) cbind(rep(seq(10,10*length(unique(df$labels)),by=10)[r],
 #                                          sum(df$labels==unique(df$labels)[r]))))[,1]
 #
@@ -445,7 +448,7 @@ get.sourceData <- function(ML2.id,ML2.df,ML2.in){
 #
 #     df <- df[df$ESCI.N.total>=30,]
 #
-#     dfG <- summarise(group_by(df,.id),
+#     dfG <- dplyr::summarise(group_by(df,.id),
 #                      y= median(ESCI.r,na.rm = T),
 #                      ymin=median(ESCI.l.r, na.rm = T),
 #                      ymax=median(ESCI.u.r, na.rm = T))
@@ -540,14 +543,14 @@ get.oriESCI <- function(CL=.95){
     if(study.name=="Tversky"){
       var.lor    <- sum(1/(tverski.ori))
       stat.test  <- fisher.exact(tverski.ori)
-      test <- tidy(stat.test)
+      test <- broom::tidy(stat.test)
       test$parameter <- NA
     }
 
     if(study.analysis=="Savani.1a"){
       var.lor    <- sum(1/(savani.ori))
       stat.test  <- fisher.exact(savani.ori)
-      test <- tidy(stat.test)
+      test <- broom::tidy(stat.test)
       colnames(test)[1] <- "statistic"
       test$parameter <- NA
     }
@@ -654,7 +657,7 @@ get.oriESCI <- function(CL=.95){
       ESCI = ESCI)
   }
 
-  df<-ldply(out)
+  df<-plyr::ldply(out)
 
   return(list(oriFULL   = df,
               masterKey = ML2.ori)
@@ -665,9 +668,16 @@ get.oriESCI <- function(CL=.95){
 #' get.analyses
 #'
 #' @param studies    Numeric vector with unique study IDs listed in the `masteRkey` table (default = all IDs).
-#' @param tp     An optional number indicating Global (1), Primary (2, default) or Secondary (3) analyses.
+#'  @param analysis.type An optional number indicating Global (1), Primary (2, default) or Secondary (3) analyses.
 #' @param Nmin.raw     Minimum raw sample size allowed to be included in the analyses.
 #' @param Nmin.cond     Minimum sample size per condition allowed to be included in the analyses.
+#' @param subset  Can be "all","WEIRD" or "NON-WEIRD"
+#' @param onlineTables  Download most recent online versions of \code{masteRkey} and \code{Source} information.
+#' @param staticData   Use data from external directory (see argument \code{indir})
+#' @param rootdir   which dir to look for data and files
+#' @param data.names   names of the datafiles for slate 1 and slate 2 (change e.g. if you study a custom subsample)
+#' @param indir   List of directories to use for different files. Change if you have files in different locations, but keep the list structure!
+#' @param outdir   List of directories to use for outputting different result files. Change if you want to save in a different location, but keep the list structure!
 #'
 #' @return A list object with analysis results.
 #' @export
@@ -692,10 +702,16 @@ get.analyses <- function(studies       = NA,
                          Nmin.raw  = 30,
                          Nmin.cond = 15,
                          subset    = c("all","WEIRD","NON-WEIRD")[1],
-                         rootdir   =normalizePath(paste0(find.package("manylabRs"),"/data")),
-                         indir     = list(RAW.DATA = "RAW.DATA.PRIVATE",MASTERKEY = "MASTERKEY", SOURCEINFO = "SOURCEINFO"),
-                         outdir    = list(ROBJECTS = "ROBJECTS",RESULTS.RDS = "RESULTS.RDS"),
-                         onlineTables = TRUE){
+                         onlineTables = TRUE,
+                         staticData   = FALSE,
+                         rootdir   = normalizePath(paste0(find.package("manylabRs"),ifelse(staticData,"/static_data","/data"))),
+                         data.names = list(Slate1 = ifelse(staticData,"ML2_Rawdata_S1_RData","ML2.S1"),
+                                           Slate2 = ifelse(staticData,"ML2_Rawdata_S2_RData","ML2.S2")),
+                         indir     = list(RAW.DATA = ifelse(staticData,"RAW.DATA.PRIVATE",""),
+                                          MASTERKEY = ifelse(onlineTables,"","MASTERKEY"),
+                                          SOURCEINFO = ifelse(onlineTables,"","SOURCEINFO")),
+                         outdir    = list(ROBJECTS = "ROBJECTS",
+                                          RESULTS.RDS = "RESULTS.RDS")){
 
 
   paths <- unique(c(paste0(rootdir,"/",indir), paste0(rootdir,"/",outdir)))
@@ -712,20 +728,24 @@ get.analyses <- function(studies       = NA,
     ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
     disp(paste("Downloaded keytable Googlesheet: ML2_masteRkey [https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/]"), header = "get.analyses", footer = FALSE)
   } else {
-    ML2.key <- read.xlsx(file.path(rootdir,indir$MASTERKEY,"ML2_masteRkey.xlsx"),"ML2masteRkey")
+    ML2.key <- openxlsx::read.xlsx(file.path(rootdir,indir$MASTERKEY,"ML2_masteRkey.xlsx"),"ML2masteRkey")
     disp(paste0("Loaded keytable from disk: ML2_masteRkey.xlsx [",file.path(rootdir,indir$MASTERKEY),"]"), header = "get.analyses", footer = FALSE)
   }
 
   ML2.key <- ML2.key[!is.na(ML2.key$unique.id),]
 
   # Load data
-  if(indir$RAW.DATA==""|onlineTables){
-    ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
-    disp(paste("Downloaded data from OSF: 'ML2_RawData_S1.rds' and 'ML2_RawData_S2.rds'"), header = FALSE, footer = FALSE)
+  if(indir$RAW.DATA==""){
+    #ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
+    data("ML2.S1","ML2.S2")
+    S1loaded <-is.data.frame(ML2.S1)
+    S2loaded <-is.data.frame(ML2.S2)
+    #disp(paste("Downloaded data from OSF: ",data.names$Slate1," and ",data.names$Slate2,""), header = FALSE, footer = FALSE)
+    disp("Using internal data...", header = FALSE, footer = FALSE)
   } else {
-    ML2.S1 <- readRDS(file.path(rootdir,indir$RAW.DATA,"ML2_RawData_S1.rds"))
-    ML2.S2 <- readRDS(file.path(rootdir,indir$RAW.DATA,"ML2_RawData_S2.rds"))
-    disp(paste0("Loaded data from disk: 'ML2_RawData_S1.rds' and 'ML2_RawData_S1.rds'[",file.path(rootdir,indir$RAW.DATA),"]"), header = FALSE, footer = FALSE)
+    ML2.S1 <- readRDS(file.path(rootdir,indir$RAW.DATA,data.names$Slate1))
+    ML2.S2 <- readRDS(file.path(rootdir,indir$RAW.DATA,data.names$Slate2))
+    disp(paste0("Loaded data from disk: ",data.names$Slate1," and ",data.names$Slate1,"[",file.path(rootdir,indir$RAW.DATA),"]"), header = FALSE, footer = FALSE)
   }
 
   # Load information about sources
@@ -791,7 +811,7 @@ get.analyses <- function(studies       = NA,
       if(Stud%in%"vanLange"){Stud <- "VanLange"}
       if(Stud%in%"Giessner"){Stud <- "Geissner"}
 
-      ML2.df$study.order <- laply(seq_along(stmp), function(o){which(grepl(Stud,stmp[[o]]))%00%NA})
+      ML2.df$study.order <- plyr::laply(seq_along(stmp), function(o){which(grepl(Stud,stmp[[o]]))%00%NA})
 
       # Loop over groups within study
       ugroup       <- sort(na.exclude(unique(eval(parse(text=toRun$ugroup)))))
@@ -914,8 +934,8 @@ get.analyses <- function(studies       = NA,
                 sID <- SourceInfoTable$Source%in%runGroups[g]&SourceInfoTable$Filename%in%fID
                 if(sum(sID)==1){
                   SourceInfo1 <- SourceInfoTable[sID, ]
-                  SourceInfo2 <- raw.df[[g]] %>% filter(case.include) %>% group_by(source) %>%
-                    summarise(
+                  SourceInfo2 <- raw.df[[g]] %>% dplyr::filter(case.include) %>% group_by(source) %>%
+                    dplyr::summarise(
                       N.sources.global    = length(unique(Source.Global)),
                       N.sources.primary   = length(unique(Source.Primary)),
                       N.sources.secondary = length(unique(Source.Secondary)),
@@ -942,8 +962,8 @@ get.analyses <- function(studies       = NA,
                 }
               } else {
 
-                SourceInfo <- raw.df[[g]] %>% filter(case.include) %>%
-                  summarise(
+                SourceInfo <- raw.df[[g]] %>% dplyr::filter(case.include) %>%
+                  dplyr::summarise(
                     N.sources.global    = length(unique(Source.Global)),
                     N.sources.primary   = length(unique(Source.Primary)),
                     N.sources.secondary = length(unique(Source.Secondary)),
@@ -967,8 +987,8 @@ get.analyses <- function(studies       = NA,
                   )
               }
             } else {
-              SourceInfo <- raw.df[[g]] %>% filter(case.include) %>%
-                summarise(
+              SourceInfo <- raw.df[[g]] %>% dplyr::filter(case.include) %>%
+                dplyr::summarise(
                   N.sources.global    = length(unique(Source.Global)),
                   N.sources.primary   = length(unique(Source.Primary)),
                   N.sources.secondary = length(unique(Source.Secondary)),
@@ -1024,7 +1044,7 @@ get.analyses <- function(studies       = NA,
               stat.data.analysed  = ML2.var[[g]][1:length(ML2.var[[g]])-1],
               stat.test = stat.test)
 
-            suppressMessages(clean.df[[g]] <- ldply(dataSource[[g]]$stat.data.analysed,melt))
+            suppressMessages(clean.df[[g]] <- plyr::ldply(dataSource[[g]]$stat.data.analysed,reshape2::melt))
             colnames(clean.df[[g]])[colnames(clean.df[[g]])==".id"] <- "Condition"
 
             rm(stat.params)
@@ -1046,9 +1066,9 @@ get.analyses <- function(studies       = NA,
             NN <- lengths(ML2.var[[g]])
             NN <- NN[!names(NN)=="N"]
             N  <- rep(ML2.var[[g]]$N,length.out = length(NN))
-            ML2.rnd <- llply(seq_along(NN), function(nn) rnorm(N[nn]))#eval(parse(text=paste(names(NN[nn])," = rnorm(101)"))))
+            ML2.rnd <- plyr::llply(seq_along(NN), function(nn) rnorm(N[nn])) #eval(parse(text=paste(names(NN[nn])," = rnorm(101)"))))
             names(ML2.rnd) <- names(NN)
-            stat.test  <- try.CATCH(with(ML2.var[[g]],eval(parse(text = ML2.key$stat.test[[s]]))))
+            stat.test  <- try.CATCH(with(ML2.var[[g]], eval(parse(text = ML2.key$stat.test[[s]]))))
             stat.test  <- stat.test$value
             #RANDOMdata <- TRUE
             # Analysis error, there may be descriptives, but set ESCI to NA
@@ -1075,8 +1095,8 @@ get.analyses <- function(studies       = NA,
 
       disp(paste(s, ML2.key$study.analysis[[s]],"- COMPLETED"), header = FALSE)
 
-      ML2.output[[s]]  <- ldply(outputSource)
-      ML2.rawdata[[s]] <- ldply(raw.df)
+      ML2.output[[s]]  <- plyr::ldply(outputSource)
+      ML2.rawdata[[s]] <- plyr::ldply(raw.df)
 
       if(outdir$ROBJECTS!=""){
         save(dataSource, file = file.path(rootdir,outdir$ROBJECTS,paste0(ML2.key$study.analysis[[s]],"_",c("Global","Primary","Secondary","Order")[tp[cnt]],".RData")))
@@ -1270,13 +1290,13 @@ get.CSVdata <- function(path, fID, finishedOnly=TRUE){
     t1 <- scan(files,sep=",",nlines = 1,what="character", quiet = T)
     t2 <- scan(files,sep=",",skip = 1, nlines = 1,what="character", quiet = T)
     t1[1:10] <- t2[1:10]
-    df <- try.CATCH(tbl_df(read.csv(files,skip=2,header=F,stringsAsFactors=F,col.names=t1)))
-    ifelse(is.data.frame(df$value), {df <- df$value}, {df <- tbl_df(read.csv(files,skip = 2,header = F,stringsAsFactors = F,col.names = t1, fileEncoding="latin1"))})
+    df <- try.CATCH(dplyr::tbl_df(read.csv(files,skip=2,header=F,stringsAsFactors=F,col.names=t1)))
+    ifelse(is.data.frame(df$value), {df <- df$value}, {df <- dplyr::tbl_df(read.csv(files,skip = 2,header = F,stringsAsFactors = F,col.names = t1, fileEncoding="latin1"))})
   }
 
   if(finishedOnly){
     # Remove cases that did not complete the study
-    df <- df %>% filter(Finished == 1)
+    df <- df %>% dplyr::filter(Finished == 1)
   }
   #df$.id <- fID
   return(df)
@@ -1367,7 +1387,7 @@ get.Order <- function(df, S1=TRUE){
   }
 
   return(list(df = df,
-              Problems = ldply(ProblemID))
+              Problems = plyr::ldply(ProblemID))
   )
 
 }
@@ -1445,13 +1465,13 @@ get.descriptives <- function(stat.test, vars, keytable){
     method <- class(stat.test)[1]
   }
 
-  if(any(laply(vars,is.factor))){
+  if(any(plyr::laply(vars,is.factor))){
 
     if((esType!="X2")&(!grepl("OR",esType))){
-      descr.sum    <- ldply(unique(vars$Condition), function(c){
+      descr.sum    <- plyr::ldply(unique(vars$Condition), function(c){
         Response <- unlist(vars[1])
         cbind(name = c,
-              tidy(summary(na.exclude(Response[vars$Condition==c])))
+              broom::tidy(summary(na.exclude(Response[vars$Condition==c])))
         )}
       )
 
@@ -1459,14 +1479,14 @@ get.descriptives <- function(stat.test, vars, keytable){
       tmp       <- as.data.frame(vars)
       Cid <- which(grepl("(ID)",colnames(tmp)))
       if(length(Cid)!=0){tmp  <- select(tmp, -Cid)}
-      descr.raw <- ddply(tmp, names(tmp)[id], tidy)
+      descr.raw <- ddply(tmp, names(tmp)[id], broom::tidy)
       descr.raw <- descr.raw[!grepl("[*]",descr.raw$column), ]
     }
 
     if((esType=="X2")|(grepl("OR",esType))){
       N <- c(N[1],N[1],N[2],N[2])
-      descr.sum <- ldply(unique(vars$Condition), function(c){
-        dfOut <- tidy(summary(na.exclude(factor(vars$Response[vars$Condition==c]))))
+      descr.sum <- plyr::ldply(unique(vars$Condition), function(c){
+        dfOut <- broom::tidy(summary(na.exclude(factor(vars$Response[vars$Condition==c]))))
         cbind.data.frame(name      = paste0(c,".",rownames(dfOut)),
                          count     = dfOut$x,
                          n         = N[c],
@@ -1478,17 +1498,17 @@ get.descriptives <- function(stat.test, vars, keytable){
 
   } else {
 
-    descr.sum  <- ldply(vars, function(gd){
+    descr.sum  <- plyr::ldply(vars, function(gd){
       if(is.list(gd)){gd<-unlist(gd)}
-      cbind(tidy(summary(na.exclude(gd)))
+      cbind(broom::tidy(summary(na.exclude(gd)))
       )})
 
     colnames(descr.sum)[colnames(descr.sum)==".id"] <- "name"
 
-    descr.raw  <- ldply(vars, function(ignore){
+    descr.raw  <- plyr::ldply(vars, function(ignore){
       #if(is.list(gd)){gd<-unlist(gd)}
       if(!is.data.frame(ignore)){ignore <- data.frame(ignore)}
-      return(tidy(ignore))})
+      return(broom::tidy(ignore))})
 
     colnames(descr.raw)[colnames(descr.raw)==".id"] <- "name"
   }
@@ -1510,7 +1530,7 @@ get.descriptives <- function(stat.test, vars, keytable){
 
   } else {
 
-    suppressMessages(test <- tidy(stat.test))
+    suppressMessages(test <- broom::tidy(stat.test))
 
     if(esType=="OR"){
       test$parameter <- NA
@@ -1690,3 +1710,210 @@ decide.analysis <- function(ML2.key, studies=NA, tp = NA){
               tp       = tp)
   )
 }
+
+
+
+
+
+#' testScript
+#'
+#' FOR TESTING PURPOSES
+#'
+#' @param studies     Unique analysis number(s) from the matsterkey sheet.
+#' @param tp      Analysis type (1 = 'study.global.include', 2 = 'study.primary.include', 3 = 'study.secondary.include').
+#' @param saveRDSfile     Save an RDS file of the output.
+#'
+#'
+testScript <- function(studies,
+                       tp,
+                       saveCSVfile=NA,
+                       saveRDSfile=NA,
+                       subset = c("all","WEIRD","NONWEIRD")[1],
+                       dir.out = "~/Dropbox/Manylabs2/TestOutput"){
+
+  analysis  <- c('study.global.include', 'study.primary.include', 'study.secondary.include', 'study.by.order')
+
+  if(between(tp,2,3)){subset="all"}
+  dfout <- get.analyses(studies = studies, analysis.type = tp, subset = subset)
+
+  ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
+
+  if(saveRDSfile){
+    fname <- c(paste0(dir.out,"/RESULTS.RDS/ML2_results_global_",subset,".rds"),
+               paste0(dir.out,"/RESULTS.RDS/ML2_results_primary_",subset,".rds"),
+               paste0(dir.out,"/RESULTS.RDS/ML2_results_secondary_",subset,".rds"),
+               paste0(dir.out,"/RESULTS.RDS/Data_Figure_StudyOrder_",subset,".rds"))[tp]
+    cat(paste0("\nSaving list object with analyses...\n"))
+    # only save non-empty objects
+
+    saveRDS(dfout,file=fname)
+  }
+
+  #setwd(dir.out)
+
+  if(saveCSVfile){
+    cat(paste0("\nSaving raw cases...\n"))
+    l_ply(seq_along(dfout$raw.case),
+          function(d){
+            if(!is.null(dfout$raw.case[[d]])&NCOL(dfout$raw.case[[d]])>0){
+              rio::export(dfout$raw.case[[d]],
+                          file = paste0(dir.out,"/RAW.CASE/", names(dfout$raw.case)[d],".",analysis[[tp]],".","RAW.CASE_",subset,".csv"))
+            }
+          })
+
+    if(tp==1){
+      cat(paste0("\nSaving global results...\n"))
+      l_ply(seq_along(dfout$merged.results),
+            function(d){
+              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
+                rio::export(dfout$merged.results[[d]],
+                            file = paste0(dir.out,"/GLOBAL/",
+                                          names(dfout$merged.results)[d],".", analysis[[tp]],"_",subset,".csv"))}})}
+
+    if(between(tp,2,3)){
+      cat(paste0("\nSaving by_group results...\n"))
+      l_ply(seq_along(dfout$merged.results),
+            function(d){
+              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
+                rio::export(dfout$merged.results[[d]],
+                            paste0(dir.out,"/AGGREGATE/",
+                                   names(dfout$merged.results)[d],".", analysis[[tp]],".csv"))}})}
+    if(tp==4){
+      cat(paste0("\nSaving by_order results...\n"))
+      l_ply(seq_along(dfout$merged.results),
+            function(d){
+              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
+                rio::export(dfout$merged.results[[d]],
+                            paste0(dir.out,"/ORDER/",
+                                   names(dfout$merged.results)[d],".", analysis[[tp]],"_",subset,".csv"))}})}
+  }
+
+  if(saveRDSfile){
+    all <- plyr::ldply(dfout$merged.results)
+
+    if(!is.null(all)&NCOL(all)>0){
+      rio::export(all, paste0(dir.out,"/GLOBAL/ALL_",analysis[[tp]],"_",subset,".csv"))
+      rio::export(all, paste0(dir.out,"/GLOBAL/ALL_",analysis[[tp]],"_",subset,".xlsx"))
+    }
+  }
+}
+
+
+#' generateOutput
+#'
+#' @param describe The output of function \link{\code{get.descriptives}}
+#' @param var.lor Variance of log OR effect size
+#' @param runningGroup The group on which the statistics in `describe` were calculated (can be: 'all', a source name, or a presentation order)
+#' @param runningAnalysis The analysis that generated the statistics in `describe`
+#'
+#' @export
+#'
+#' @author
+#' Fred Hasselman
+#'
+generateOutput <-  function(describe = describe,
+                            var.lor  = NA,
+                            runningGroup = "None",
+                            runningAnalysis = "None"){
+
+  ESCI <- list(value = NULL,
+               warning = "init")
+
+  test  = describe$test
+  descr = describe$descr.raw
+
+  if(grepl("OR",test$estype, fixed = TRUE)){
+    Nv <- c(descr$n[1],descr$n[3])
+  } else {
+    if(grepl("Z",test$estype, fixed=TRUE)){
+      Nv <- c(descr$n[1]+descr$n[3],descr$n[2]+descr$n[4])
+    } else {
+      Nv <- c(descr$n[1],descr$n[2])
+    }
+  }
+
+  if(!is.na(test[1,1])){
+
+    ESCI <- try.CATCH(any2any(testInfo  = test,
+                              df1       = test[, which(grepl("parameter",colnames(test)))[1]],
+                              df2       = test[, which(grepl("parameter2",colnames(test)))],
+                              N         = sum(Nv, na.rm = TRUE),
+                              n1        = Nv[1],
+                              n2        = Nv[2],
+                              esType    = test$estype,
+                              var.lor   = var.lor,
+                              CL          = stat.params$conf.level,
+                              keepSign    = TRUE,
+                              alternative = ifelse(is.null(test$alternative),
+                                                   stat.params[[4]],
+                                                   as.character(test$alternative))
+    ))
+  }
+
+  if(all(is.null(ESCI$warning),
+         grepl("simpleWarning",ESCI$warning),
+         !grepl("Error", ESCI$value[[1]]),
+         !grepl("message", names(unlist(ESCI))[1]),
+         !is.na(test[1,1]))){
+    ESCI  <- ESCI$value
+    es.id <- which(colnames(ESCI)%in%"r")
+  } else {
+    ESCI  <- test
+    es.id <- 1
+  }
+
+  ifelse(is.na(ESCI[es.id]),
+         disp(paste(runningAnalysis,'-',
+                    runningGroup,'>> ES r is NA'), header = FALSE, footer = FALSE),
+
+         ifelse(abs(ESCI[es.id][1])>=.95,
+                disp(paste(runningAnalysis,'-',
+                           runningGroup,'>> ES r is extreme hi/lo: ',
+                           round(ESCI[es.id][1],digits=2)), header = FALSE, footer = FALSE),
+
+                ifelse(abs(ESCI[es.id][1])<=0.05,
+                       disp(paste(runningAnalysis,'-',
+                                  runningGroup,'>> ES r is close to 0: ',
+                                  round(ESCI[es.id][1],digits=2)), header = FALSE, footer = FALSE),
+
+                       ifelse(any(is.infinite(ESCI[es.id][[1]])),
+                              disp(paste(runningAnalysis,'-',
+                                         runningGroup,'>> ES r (CI) is infinite'),
+                                   header = FALSE, footer = FALSE),
+                              NA)
+                )
+         )
+  )
+
+
+  # Add columns for correlation comparison ES
+  ESCI$cohensQ   <- NA
+  ESCI$cohensQ.l <- NA
+  ESCI$cohensQ.u <- NA
+  ESCI$bootR1    <- NA
+  ESCI$bootR2    <- NA
+  ESCI$bootCI.l  <- NA
+  ESCI$bootCI.u  <- NA
+
+  if(test$estype=="Z.f"){
+    ESCI$ncp       <- test$fZ.statistic
+    ESCI$ncp.lo    <- test$fZ.ncp.lo
+    ESCI$ncp.hi    <- test$fZ.ncp.hi
+    ESCI$cohensQ   <- test$fZ.effect.size
+    ESCI$cohensQ.l <- test$fZ.effect.size.ci[1]
+    ESCI$cohensQ.u <- test$fZ.effect.size.ci[2]
+    if(test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
+      ESCI[,which(colnames(ESCI)=="d"):NCOL(ESCI)] <- NA
+      ESCI$bootR1    <- test$fZ.bootR1
+      ESCI$bootR2    <- test$fZ.bootR2
+      ESCI$bootCI.l  <- test$fZ.bootcCI.l
+      ESCI$bootCI.u  <- test$fZ.bootcCI.u
+      ESCI$r         <- test$fZ.r
+      ESCI$l.r       <- test$fZ.l.r
+      ESCI$u.r       <- test$fZ.u.r
+    }
+  }
+
+  return(ESCI)
+}
+

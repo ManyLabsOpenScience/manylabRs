@@ -1,8 +1,6 @@
 
-```{r,echo=FALSE}
-library(plyr)
-library(broom)
-```
+[![Travis-CI Build Status](https://travis-ci.org/ManyLabsOpenScience/manylabRs.svg?branch=master)](https://travis-ci.org/ManyLabsOpenScience/manylabRs)
+
 
 ## Install the package
 

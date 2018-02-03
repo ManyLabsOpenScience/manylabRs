@@ -948,10 +948,14 @@ varfun.Savani.1 <- function(vars){
 #'
 
 varfun.Norenzayan.1 <- function(vars){
-    return(list(Belong  = rowMeans(vars$Belong==rep(1:2,10),na.rm=TRUE),
-                Similar = rowMeans(vars$Similar==rep(1:2,10),na.rm=TRUE),
-                N       = c(nrow(vars$Belong), nrow(vars$Similar)))
-           )
+  return(list(Belong  = rowMeans(vars$Belong == matrix(rep(1:2,10), nrow=nrow(vars$Belong), ncol=20, byrow = TRUE), na.rm = T),
+              Similar = rowMeans(vars$Similar == matrix(rep(1:2,10), nrow=nrow(vars$Similar), ncol=20, byrow = TRUE), na.rm = T),
+              N       = c(nrow(vars$Belong), nrow(vars$Similar))))
+
+    # return(list(Belong  = rowMeans(vars$Belong==rep(1:2,10),na.rm=TRUE),
+    #             Similar = rowMeans(vars$Similar==rep(1:2,10),na.rm=TRUE),
+    #             N       = c(nrow(vars$Belong), nrow(vars$Similar)))
+    #        )
 }
 
 #' varfun.Norenzayan.2
@@ -969,14 +973,16 @@ varfun.Norenzayan.2 <- function(vars){
 
     NafterTG.Bel <- sapply(which((vars$RawDataFilter[[1]]$Included)), function(i) which(unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]")) == "Norenzayan") > which(unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]")) == "Tversky.Gati"))
     NafterTG.Sim <- sapply(which((vars$RawDataFilter[[2]]$Included)), function(i) which(unlist(strsplit(x = vars$RawDataFilter[[2]]$StudyOrderN[i], split = "[|]")) == "Norenzayan") > which(unlist(strsplit(x = vars$RawDataFilter[[2]]$StudyOrderN[i], split = "[|]")) == "Tversky.Gati"))
-    length(rowSums(vars$Similar[,1:20]==1,na.rm=TRUE)/20)
+
+   # length(rowSums(vars$Similar[,1:20]==1,na.rm=TRUE)/20)
 
     NafterTG.Bel <- unlist(NafterTG.Bel)
     NafterTG.Sim <- unlist(NafterTG.Sim)
 
     N = c(length(NafterTG.Bel),length(NafterTG.Sim))
 
-    return(list(Response  = c(rowSums(vars$Belong==rep(1:2,10),na.rm=T)/20, rowSums(vars$Similar==rep(1:2,10),na.rm=T)/20),
+    return(list(Response  = c(rowMeans(vars$Belong == matrix(rep(1:2,10), nrow = nrow(vars$Belong), ncol=20, byrow = TRUE),na.rm=T),
+                              rowMeans(vars$Similar== matrix(rep(1:2,10), nrow = nrow(vars$Belong), ncol=20, byrow = TRUE),na.rm=T)),
                 Condition = factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition),
                 Order     = factor(c(as.numeric(NafterTG.Bel), as.numeric(NafterTG.Sim)), levels=c(0,1), labels = vars$labels$Order),
                 uID       = 1:(sum(N,na.rm = TRUE)),

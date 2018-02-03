@@ -239,21 +239,21 @@ swarmPlot <- function(df, anonymous=FALSE, addSize=FALSE, addMedian=TRUE, addGlo
   df <- data.frame(df,bs)
   se <- function(x){sqrt(var(x,na.rm=TRUE)/length(na.omit(x)))}
 
-  df$meanES <- ldply(unique(df$labels),
+  df$meanES <- plyr::ldply(unique(df$labels),
                      function(r) cbind(rep(mean(df$y[df$labels==r], na.rm = TRUE),
                                            sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
-  df$seES <- ldply(unique(df$labels),
+  df$seES <- plyr::ldply(unique(df$labels),
                    function(r) cbind(rep(se(df$y[df$labels==r]),
                                          sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
 
   df <- arrange(df, meanES)
 
-  df$xx <- ldply(unique(df$labels),
+  df$xx <- plyr::ldply(unique(df$labels),
                  function(r) cbind(scale(df$x[df$labels==r], scale = F)))[,1]
-  df$xf <- ldply(seq_along(unique(df$labels)),
+  df$xf <- plyr::ldply(seq_along(unique(df$labels)),
                  function(r) cbind(df$xx[df$labels==unique(df$labels)[r]] +
                                      seq(10,10*length(unique(df$labels)), by=10)[r]))[,1]
-  df$xn <- ldply(seq_along(unique(df$labels)),
+  df$xn <- plyr::ldply(seq_along(unique(df$labels)),
                  function(r) cbind(rep(seq(10,10*length(unique(df$labels)),by=10)[r],
                                        sum(df$labels==unique(df$labels)[r]))))[,1]
 
@@ -288,7 +288,7 @@ swarmPlot <- function(df, anonymous=FALSE, addSize=FALSE, addMedian=TRUE, addGlo
 
   df <- df[df$ESCI.N.total>=30,]
 
-  dfG <- summarise(group_by(df,.id),
+  dfG <- dplyr::summarise(group_by(df,.id),
                    y= mean(ESCI.r,na.rm = T),
                    ymin=mean(ESCI.l.r, na.rm = T),
                    ymax=mean(ESCI.u.r, na.rm = T))
@@ -296,7 +296,7 @@ swarmPlot <- function(df, anonymous=FALSE, addSize=FALSE, addMedian=TRUE, addGlo
   dfG   <- arrange(dfG, y)
   dfG$x <- seq(10,10*nrow(dfG),by=10)
 
-  dfGlobal <- summarise(group_by(df,.id),
+  dfGlobal <- dplyr::summarise(group_by(df,.id),
                         y= max(GlobalES,na.rm = TRUE),
                         ymin=max(GlobalESlo, na.rm = TRUE),
                         ymax=max(GlobalEShi, na.rm = TRUE))
@@ -305,7 +305,7 @@ swarmPlot <- function(df, anonymous=FALSE, addSize=FALSE, addMedian=TRUE, addGlo
 
   if(addOriES){
     oriES      <- oriES[ID.ori,]
-    oriES$mES <- laply(na.exclude(oriES$study.analysis), function(s) dfG$y[tolower(dfG$.id)%in%tolower(s)])
+    oriES$mES <- plyr::laply(na.exclude(oriES$study.analysis), function(s) dfG$y[tolower(dfG$.id)%in%tolower(s)])
     oriES     <- dplyr::arrange(oriES, mES)
     oriES$x   <- seq(10,10*nrow(oriES),by=10)
   }
@@ -862,7 +862,7 @@ cor.test.fisherZ <- function(r1 = NULL,
 
   if(oneCor){
     if((dim(as.matrix(r1))[2]==2)){
-      r1 <- cor(r1[,1],r1[,2],use="pairwise.complete.obs", method = cor.type)
+      r1 <- stats::cor(r1[,1],r1[,2],use="pairwise.complete.obs", method = cor.type)
     } else{
       if(all((dim(as.matrix(r1))!=1))){
         disp(message = "r1 needs to be:", header = "cor.test.fisherZ", footer = FALSE)
@@ -906,8 +906,8 @@ cor.test.fisherZ <- function(r1 = NULL,
 
   } else {
     if((dim(as.matrix(r1))[2]==2)&(dim(as.matrix(r2))[2]==2)){
-      r1 <- cor(r1[,1],r1[,2], use = "pairwise.complete.obs", method = cor.type)
-      r2 <- cor(r2[,1],r2[,2], use = "pairwise.complete.obs", method = cor.type)
+      r1 <- stats::cor(r1[,1],r1[,2], use = "pairwise.complete.obs", method = cor.type)
+      r2 <- stats::cor(r2[,1],r2[,2], use = "pairwise.complete.obs", method = cor.type)
     } else{
       if(all((dim(as.matrix(r1))!=1))&all(dim(as.matrix(r2))!=1)){
         disp(message = "r1 and r2 each need to be:", header = "cor.test.fisherZ", footer = FALSE)
@@ -1117,8 +1117,8 @@ twopcor<-function(x1,y1,x2,y2,SEED=TRUE){
     ihi<-593
   }
   bsort<-sort(bvec)
-  r1<-cor(x1,y1)
-  r2<-cor(x2,y2)
+  r1<-stats::cor(x1,y1)
+  r2<-stats::cor(x2,y2)
   ci<-c(bsort[ilow],bsort[ihi])
   list(r1=r1,r2=r2,ci=ci)
 }
@@ -1148,7 +1148,7 @@ pcorbsub<-function(isub, x, y)
   #  a bootstrap sample from the sequence of integers
   #  1, 2, 3, ..., n
   #
-  pcorbsub<-cor(x[isub],y[isub])
+  pcorbsub<-stats::cor(x[isub],y[isub])
   pcorbsub
 }
 
@@ -1173,16 +1173,16 @@ decide.EqualVar <- function(vars, labels, key, alpha=.05, criterion = 2, group, 
 
   if(length(vars)==2){
 
-    if(any(laply(vars,is.factor))){
+    if(any(plyr::laply(vars,is.factor))){
 
       longDat <- cbind.data.frame(vars)
-      colnames(longDat)[laply(vars,is.factor)]    <- "group"
-      colnames(longDat)[!(laply(vars,is.factor))] <- "xy"
+      colnames(longDat)[plyr::laply(vars,is.factor)]    <- "group"
+      colnames(longDat)[!(plyr::laply(vars,is.factor))] <- "xy"
 
     } else {
 
       if(all(lengths(vars)>1)){
-        longDat <- ldply(unlist(vars))
+        longDat <- plyr::ldply(unlist(vars))
         longDat <- data.frame(xy = longDat$V1, group = factor(c(rep(1, length(vars[[1]])),
                                                                 rep(2, length(vars[[2]])))))
       }
@@ -1218,7 +1218,7 @@ decide.EqualVar <- function(vars, labels, key, alpha=.05, criterion = 2, group, 
 
 tidyDF <- function(df){
   for(l in seq_along(df$labels)){
-    ldply(df$labels[[l]], function(d) tidy(data.frame(eval(parse(text = paste0('df$',d))))))
+    plyr::ldply(df$labels[[l]], function(d) tidy(data.frame(eval(parse(text = paste0('df$',d))))))
   }
 }
 
@@ -1290,10 +1290,10 @@ init <- function(){
   # for testing purposes
   srcDir <- "~/Documents/GitHub/manylabRs/manylabRs/R/"
   #source(paste0(srcDir,"C-3PR_ASCII.R"))
-  source(paste0(srcDir,'getData.R'))
+  #source(paste0(srcDir,'getData.R'))
   source(paste0(srcDir,'inIT.R'))
-  source(paste0(srcDir,'ML2_variable_functions.R'))
-  source(paste0(srcDir,'fRedsRutils.R'))
+  #source(paste0(srcDir,'ML2_variable_functions.R'))
+  #source(paste0(srcDir,'fRedsRutils.R'))
 
   # Function inIT will load and -if necessary- install packages passed in a list (unIT will do the reverse operation).
   in.IT(c("MBESS","reshape2","plyr","tidyverse","metafor","RCurl","xlsx","broom","httr","compute.es","downloader","car", "lme4", "lmerTest","exact2x2","ggplot2","gplots","gridExtra","lattice","latticeExtra","rio","scales","lubridate"))
@@ -1317,11 +1317,11 @@ disp <- function(message='Hello world!', header = "disp", footer = TRUE){
   ps <- "# "
 
   msg <- textConnection(message)
-  mWidth <- max(laply(readLines(msg),nchar))
+  mWidth <- max(plyr::laply(readLines(msg),nchar))
   if(!grepl(ps,message)) mWidth <- mWidth+2
 
   if(is.character(header)){
-    hWidth <- max(laply(header,nchar))
+    hWidth <- max(plyr::laply(header,nchar))
     mWidth <- max(hWidth,mWidth)
   }
 
@@ -1352,246 +1352,6 @@ disp <- function(message='Hello world!', header = "disp", footer = TRUE){
   }
   close(msg)
   return(invisible(message))
-}
-
-
-
-#' testScript
-#'
-#' FOR TESTING PURPOSES
-#'
-#' @param studies     Unique analysis number(s) from the matsterkey sheet.
-#' @param tp      Analysis type (1 = 'study.global.include', 2 = 'study.primary.include', 3 = 'study.secondary.include').
-#' @param saveRDSfile     Save an RDS file of the output.
-#'
-#'
-testScript <- function(studies,
-                       tp,
-                       saveCSVfile=NA,
-                       saveRDSfile=NA,
-                       subset = c("all","WEIRD","NONWEIRD")[1],
-                       dir.out = "~/Dropbox/Manylabs2/TestOutput"){
-
-  analysis  <- c('study.global.include', 'study.primary.include', 'study.secondary.include', 'study.by.order')
-
-  if(between(tp,2,3)){subset="all"}
-  dfout <- get.analyses(studies = studies, analysis.type = tp, subset = subset)
-
-  ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
-
-  if(saveRDSfile){
-    fname <- c(paste0(dir.out,"/RESULTS.RDS/ML2_results_global_",subset,".rds"),
-               paste0(dir.out,"/RESULTS.RDS/ML2_results_primary_",subset,".rds"),
-               paste0(dir.out,"/RESULTS.RDS/ML2_results_secondary_",subset,".rds"),
-               paste0(dir.out,"/RESULTS.RDS/Data_Figure_StudyOrder_",subset,".rds"))[tp]
-    cat(paste0("\nSaving list object with analyses...\n"))
-    # only save non-empty objects
-
-    saveRDS(dfout,file=fname)
-  }
-
-  #setwd(dir.out)
-
-  if(saveCSVfile){
-    cat(paste0("\nSaving raw cases...\n"))
-    l_ply(seq_along(dfout$raw.case),
-          function(d){
-            if(!is.null(dfout$raw.case[[d]])&NCOL(dfout$raw.case[[d]])>0){
-              rio::export(dfout$raw.case[[d]],
-                          file = paste0(dir.out,"/RAW.CASE/", names(dfout$raw.case)[d],".",analysis[[tp]],".","RAW.CASE_",subset,".csv"))
-            }
-          })
-
-    if(tp==1){
-      cat(paste0("\nSaving global results...\n"))
-      l_ply(seq_along(dfout$merged.results),
-            function(d){
-              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
-                rio::export(dfout$merged.results[[d]],
-                            file = paste0(dir.out,"/GLOBAL/",
-                                          names(dfout$merged.results)[d],".", analysis[[tp]],"_",subset,".csv"))}})}
-
-    if(between(tp,2,3)){
-      cat(paste0("\nSaving by_group results...\n"))
-      l_ply(seq_along(dfout$merged.results),
-            function(d){
-              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
-                rio::export(dfout$merged.results[[d]],
-                            paste0(dir.out,"/AGGREGATE/",
-                                   names(dfout$merged.results)[d],".", analysis[[tp]],".csv"))}})}
-    if(tp==4){
-      cat(paste0("\nSaving by_order results...\n"))
-      l_ply(seq_along(dfout$merged.results),
-            function(d){
-              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
-                rio::export(dfout$merged.results[[d]],
-                            paste0(dir.out,"/ORDER/",
-                                   names(dfout$merged.results)[d],".", analysis[[tp]],"_",subset,".csv"))}})}
-  }
-
-  if(saveRDSfile){
-    all <- ldply(dfout$merged.results)
-
-    if(!is.null(all)&NCOL(all)>0){
-      rio::export(all, paste0(dir.out,"/GLOBAL/ALL_",analysis[[tp]],"_",subset,".csv"))
-      rio::export(all, paste0(dir.out,"/GLOBAL/ALL_",analysis[[tp]],"_",subset,".xlsx"))
-    }
-  }
-}
-
-
-#' generateOutput
-#'
-#' @param describe The output of function \link{\code{get.descriptives}}
-#' @param var.lor Variance of log OR effect size
-#' @param runningGroup The group on which the statistics in `describe` were calculated (can be: 'all', a source name, or a presentation order)
-#' @param runningAnalysis The analysis that generated the statistics in `describe`
-#'
-#' @export
-#'
-#' @author
-#' Fred Hasselman
-#'
-#' @examples
-#' # This example follows some (but not all!!) steps of the main function: get.analyses()
-#' # Select analysis 1 [Huang.1] and source 1 ['brasilia']
-#' runningAnalysis <- 1
-#' runningGroup    <- 'brasilia'
-#'
-#' # Get the dataset and information about the analysis to run
-#' masteRkeyInfo  <- get.GoogleSheet(data='ML2masteRkey')$df[runningAnalysis,]
-#'
-#' if(masteRkeyInfo$study.slate == 1){ML2.df <- load(ML2_RawData_S1.RData)} else {ML2.df <- load(ML2_RawData_S2.RData)}
-#'
-#' # Organise the information into a list object
-#' analysisInfo   <- get.info(masteRkeyInfo, colnames(ML2.df), subset="all")
-#'
-#' # Use analysisInfo to generate a cahin of filter instructions to select valid variables and cases
-#' filterChain <- get.chain(analysisInfo)
-#'
-#' # Apply the filterChain to extract the dataset
-#' ML2.df <- eval(parse(text=paste("ML2.df", analysisInfo$df)))
-#' ML2.df <- get.sourceData(filterChain, ML2.df[ML2.df$source%in%runningGroup], analysisInfo)
-#'
-#' # Create a list bject with data vectors and appropriate labels, that can be passed to the analysis function
-#' vars   <- eval(parse(text=paste0(masteRkeyInfo$stat.vars,'(ML2.df)',collapse="")))
-#'
-#' # Get the paramers for the parameters to use fo the analysis
-#' stat.params <<- analysisInfo$stat.params
-#'
-#' # Run the analysis listed in masteRkey column 'stat.test' usinf the data vectors in 'vars'
-#' stat.test   <- with(vars, eval(parse(text = masteRkeyInfo$stat.test)))
-#'
-#' # Return descriptives and summaries
-#' describe <- get.descriptives(stat.test = stat.test, vars = vars, keytable  = masterKeyInfo)
-#'
-#' # Generate output
-#' ESCI <- generateOutput(describe = describe, runningGroup = runningGroup, runningAnalysis = runningAnalysis)
-#'
-generateOutput <-  function(describe = describe,
-                            var.lor  = NA,
-                            runningGroup = "None",
-                            runningAnalysis = "None"){
-
-  ESCI <- list(value = NULL,
-               warning = "init")
-
-  test  = describe$test
-  descr = describe$descr.raw
-
-  if(grepl("OR",test$estype, fixed = TRUE)){
-    Nv <- c(descr$n[1],descr$n[3])
-  } else {
-    if(grepl("Z",test$estype, fixed=TRUE)){
-      Nv <- c(descr$n[1]+descr$n[3],descr$n[2]+descr$n[4])
-    } else {
-      Nv <- c(descr$n[1],descr$n[2])
-    }
-  }
-
-  if(!is.na(test[1,1])){
-
-    ESCI <- try.CATCH(any2any(testInfo  = test,
-                              df1       = test[, which(grepl("parameter",colnames(test)))[1]],
-                              df2       = test[, which(grepl("parameter2",colnames(test)))],
-                              N         = sum(Nv, na.rm = TRUE),
-                              n1        = Nv[1],
-                              n2        = Nv[2],
-                              esType    = test$estype,
-                              var.lor   = var.lor,
-                              CL          = stat.params$conf.level,
-                              keepSign    = TRUE,
-                              alternative = ifelse(is.null(test$alternative),
-                                                   stat.params[[4]],
-                                                   as.character(test$alternative))
-    ))
-  }
-
-  if(all(is.null(ESCI$warning),
-         grepl("simpleWarning",ESCI$warning),
-         !grepl("Error", ESCI$value[[1]]),
-         !grepl("message", names(unlist(ESCI))[1]),
-         !is.na(test[1,1]))){
-    ESCI  <- ESCI$value
-    es.id <- which(colnames(ESCI)%in%"r")
-  } else {
-    ESCI  <- test
-    es.id <- 1
-  }
-
-  ifelse(is.na(ESCI[es.id]),
-         disp(paste(runningAnalysis,'-',
-                    runningGroup,'>> ES r is NA'), header = FALSE, footer = FALSE),
-
-         ifelse(abs(ESCI[es.id][1])>=.95,
-                disp(paste(runningAnalysis,'-',
-                           runningGroup,'>> ES r is extreme hi/lo: ',
-                           round(ESCI[es.id][1],digits=2)), header = FALSE, footer = FALSE),
-
-                ifelse(abs(ESCI[es.id][1])<=0.05,
-                       disp(paste(runningAnalysis,'-',
-                                  runningGroup,'>> ES r is close to 0: ',
-                                  round(ESCI[es.id][1],digits=2)), header = FALSE, footer = FALSE),
-
-                       ifelse(any(is.infinite(ESCI[es.id][[1]])),
-                              disp(paste(runningAnalysis,'-',
-                                         runningGroup,'>> ES r (CI) is infinite'),
-                                   header = FALSE, footer = FALSE),
-                              NA)
-                )
-         )
-  )
-
-
-  # Add columns for correlation comparison ES
-  ESCI$cohensQ   <- NA
-  ESCI$cohensQ.l <- NA
-  ESCI$cohensQ.u <- NA
-  ESCI$bootR1    <- NA
-  ESCI$bootR2    <- NA
-  ESCI$bootCI.l  <- NA
-  ESCI$bootCI.u  <- NA
-
-  if(test$estype=="Z.f"){
-    ESCI$ncp       <- test$fZ.statistic
-    ESCI$ncp.lo    <- test$fZ.ncp.lo
-    ESCI$ncp.hi    <- test$fZ.ncp.hi
-    ESCI$cohensQ   <- test$fZ.effect.size
-    ESCI$cohensQ.l <- test$fZ.effect.size.ci[1]
-    ESCI$cohensQ.u <- test$fZ.effect.size.ci[2]
-    if(test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
-      ESCI[,which(colnames(ESCI)=="d"):NCOL(ESCI)] <- NA
-      ESCI$bootR1    <- test$fZ.bootR1
-      ESCI$bootR2    <- test$fZ.bootR2
-      ESCI$bootCI.l  <- test$fZ.bootcCI.l
-      ESCI$bootCI.u  <- test$fZ.bootcCI.u
-      ESCI$r         <- test$fZ.r
-      ESCI$l.r       <- test$fZ.l.r
-      ESCI$u.r       <- test$fZ.u.r
-    }
-  }
-
-  return(ESCI)
 }
 
 
