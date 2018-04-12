@@ -22,5 +22,7 @@
 *.knit.md
 .Rproj.user
 inst/doc
+inst/extdata
+inst/static_data/
 
 data/

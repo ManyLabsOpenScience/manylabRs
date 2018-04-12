@@ -157,7 +157,6 @@ varfun.Alter.2 <- function(vars){
 #'   INCLUSION PERCENTAGE BASED ON
 #'    FLUENT / DISFLUENT SEPERATELY: 1 5 6
 #'    BOTH: 1 5 6
-#'    @examples
 varfun.Alter.3 <- function(vars){
 
         var.correct <- list(s1=c(7),
@@ -387,10 +386,10 @@ varfun.Inbar.1 <- function(vars){
     vars$DiffKiss$disg1.12 <- -vars$DiffKiss$disg1.12
 
     vars$SameKiss <- dplyr::mutate(vars$SameKiss,
-                                   DSRs = rowMeans(scaleR(dplyr::select(vars$SameKiss, starts_with("disg"))), na.rm = TRUE)
+                                   DSRs = rowMeans(elascer(dplyr::select(vars$SameKiss, starts_with("disg"))), na.rm = TRUE)
                                    )
     vars$DiffKiss <- dplyr::mutate(vars$DiffKiss,
-                                   DSRd = rowMeans(scaleR(dplyr::select(vars$DiffKiss, starts_with("disg"))), na.rm = TRUE)
+                                   DSRd = rowMeans(elascer(dplyr::select(vars$DiffKiss, starts_with("disg"))), na.rm = TRUE)
                                    )
 
     outcome <- c("Intent","Wrong","Encourage")[colnames(vars$SameKiss)[1]==c("inba1.3","inba1.4","inba1.5")]
@@ -1143,7 +1142,8 @@ varfun.Zhong.1 <- function(vars){
 #' @references Zhong, C. B., & Liljenquist, K. (2006). Washing away your sins: Threatened morality and physical cleansing. Science, 313, 1451--1452.
 #'
 varfun.Zhong.2 <- function(vars){
-    #in.IT(c('lme4','lmerTest'))
+    library(lme4)
+    library(lmerTest)
 
     idClean <- c(2,3,7,8,10)+1
     idOther <- c(1,4,5,6,9)+1

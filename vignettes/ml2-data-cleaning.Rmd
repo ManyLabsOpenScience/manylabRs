@@ -12,6 +12,6 @@ vignette: >
 
 # ManyLabs 2  
 
-* The [Data Cleaning Report](http://fredhasselman.com/other/ML2/ML2_data_cleaning.html) 
+* The [Data Cleaning Report](https://manylabsopenscience.github.io/ML2_data_cleaning) 
 
 * The [`.Rmd` file that generated it](https://raw.githubusercontent.com/ManyLabsOpenScience/manylabRs/master/inst/ML2_data_cleaning.Rmd)

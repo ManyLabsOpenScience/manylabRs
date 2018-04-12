@@ -1,4 +1,6 @@
-#' @importFrom magrittr %>%
+#' @import stats
+#' @import plyr
+#' @import tidyverse
 NULL
 
 # Data Cleaning functions  ------------------
@@ -184,7 +186,7 @@ get.cases <- function(rule,study.vars,study.vars.labels,stat.params){
   filtvars <- study.vars.labels[names(study.vars.labels)%in%rule[r,1]]
 
   # Start with 'pre'
-  pre <-plyr::llply(unlist(filtvars), function(v){paste0(v,' %>% dplyr::filter(')})
+  pre <- plyr::llply(unlist(filtvars), function(v){paste0(v,' %>% dplyr::filter(')})
 
   if(type == "each"){
 
@@ -289,8 +291,8 @@ get.sourceData <- function(ML2.id,ML2.df,ML2.in){
   N       <- numeric(length(ML2.in$study.vars))
   if(is.null(ML2.df$uID)){ML2.df$uID <- seq_along(ML2.df$source)}
   #study.vars[1]    <- unlist(ML2.in$study.vars)
-  vars <- list()
-  dfname <- list()
+  vars    <- list()
+  dfname  <- list()
   RawData <- list()
   #id <- factor(ML2.df$.id)
   for(i in seq_along(ML2.in$study.vars)){
@@ -505,6 +507,7 @@ get.oriESCI <- function(CL=.95){
   ID.ori  <- which(nchar(ML2.ori$orig.stat.type)>0)
   out     <- list()
 
+
   cnt <- 0
 
   #skip <- c(4,16)
@@ -516,14 +519,14 @@ get.oriESCI <- function(CL=.95){
                        estimate1 = NA,
                        estimate2 = NA, alternative=NA,
                        parameter=NA, parameter1=NA, parameter2=NA,
-                       conf.low=NA, conf.high=NA)
+                       conf.low=NA, conf.high=NA,method=NA)
 
     cnt<-cnt+1
 
     study.id         <- ML2.ori$study.id[[s]]
     study.slate      <- ML2.ori$study.slate[[s]]
     study.name       <- ML2.ori$study.name[[s]]
-    study.analysis   <-  ML2.ori$study.analysis[[s]]
+    study.analysis   <- ML2.ori$study.analysis[[s]]
     test$statistic   <- ML2.ori$orig.stat.ncp[[s]]
 
     cat(paste(study.analysis,"\n"))
@@ -556,20 +559,68 @@ get.oriESCI <- function(CL=.95){
     }
 
     if(esType=="Z.f"){
-      stat.test <- cor.test.fisherZ(r1=ML2.ori$orig.stat.estimate1[[s]],
+
+      stat.test <- cor_test_fisherZ(r1 =ML2.ori$orig.stat.estimate1[[s]],
                                     r2= ML2.ori$orig.stat.estimate2[[s]],
                                     n1=n1,
-                                    n2=n2)
-      tmp <- unclass(stat.test)
-      stat.test <- tmp[1:8]
-      test$estimate <- test$statistic <- tanh(tmp$effect.size[[1]])
-      test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
-      test$conf.high <- tanh(tmp$effect.size.ci[[2]])
-      class(stat.test) <- "htest"
+                                    n2=n2,
+                                    Cohens.q = TRUE)
+
+      if(stat.test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
+
+        # Wilcox.out<- twopcor(x1=vars$r1[[1]],
+        #                      x2=vars$r1[[2]],
+        #                      y1=vars$r2[[1]],
+        #                      y2=vars$r2[[2]])
+
+        test$fZ.ncp       <- stat.test$statistic
+        test$fZ.ncp.lo    <- "fisherZ - 2 corr"
+        test$fZ.ncp.hi    <- "fisherZ - 2 corr"
+        test$fZ.cohensQ   <- stat.test$effect.size
+        test$fZ.cohensQ.l <- stat.test$effect.size.ci[1]
+        test$fZ.cohensQ.u <- stat.test$effect.size.ci[2]
+        test$fZ.bootR1    <- NA
+        test$fZ.bootR2    <- NA
+        test$fZ.bootCI.l  <- NA
+        test$fZ.bootCI.u  <- NA
+        test$fZ.r         <- NA
+        test$fZ.l.r       <- NA
+        test$fZ.u.r       <- NA
+      } else {
+        test$fZ.ncp       <- stat.test$statistic
+        test$fZ.ncp.lo    <- "fisherZ - 1 corr"
+        test$fZ.ncp.hi    <- "fisherZ - 1 corr"
+        test$fZ.cohensQ   <- stat.test$effect.size
+        test$fZ.cohensQ.l <- stat.test$effect.size.ci[1]
+        test$fZ.cohensQ.u <- stat.test$effect.size.ci[2]
+      }
+
+      if(all(c("htest","fisherZ")%in%class(stat.test))){
+        tmp <- unclass(stat.test)
+        stat.test <- tmp[1:8]
+        stat.test$estimate <- tanh(tmp$effect.size[[1]])
+        stat.test$conf.int <- c(tanh(tmp$effect.size.ci[[1]]),tanh(tmp$effect.size.ci[[2]]))
+        #attr(stat.test$conf.int,"conf.level")
+        class(stat.test) <- "htest"
+      }
+      test$method <- stat.test$method
+
+    #  tst <- get.descriptives(stat.test = stat.test,keytable = ML2.ori[s,],vars = vars,testOnly = TRUE)
+#
+#       tmp <- unclass(stat.test)
+#       stat.test <- tmp[1:8]
+#       test$estimate <- test$statistic <- tanh(tmp$effect.size[[1]])
+#       test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
+#       test$conf.high <- tanh(tmp$effect.size.ci[[2]])
+#       test$method <- stat.test$method
+#       test<-stat.test
+#       class(stat.test) <- "htest"
+
+
     }
 
     if(esType=="t.r"){
-      stat.test <- cor.test.fisherZ(r1 = test$estimate,
+      stat.test <- cor_test_fisherZ(r1 = test$estimate,
                                     r2 = NULL,
                                     n1=n1,
                                     n2=NULL)
@@ -578,8 +629,8 @@ get.oriESCI <- function(CL=.95){
       test$estimate <- tanh(tmp$effect.size[[1]])
       test$statistic <- test$estimate * sqrt((N-2)/(1-test$estimate^2))
       df1 <- N-2
-      # test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
-      # test$conf.high <- tanh(tmp$effect.size.ci[[2]])
+       test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
+       test$conf.high <- tanh(tmp$effect.size.ci[[2]])
       class(stat.test) <- "htest"
 
     }
@@ -590,7 +641,6 @@ get.oriESCI <- function(CL=.95){
     } else {
       test$parameter1 <- df1
     }
-
 
 
     if(!(cnt%in%skip)){
@@ -630,16 +680,50 @@ get.oriESCI <- function(CL=.95){
       es.id <- 1
     }
 
-    ML2.ori$orig.stat.ncp[s]     <- ESCI$ncp
-    ML2.ori$orig.stat.ncp.ciL[s] <- ESCI$ncp.lo
-    ML2.ori$orig.stat.ncp.ciU[s] <- ESCI$ncp.hi
+    # Add columns for correlation comparison ES
+    ESCI$cohensQ   <- NA
+    ESCI$cohensQ.l <- NA
+    ESCI$cohensQ.u <- NA
+    ESCI$bootR1    <- NA
+    ESCI$bootR2    <- NA
+    ESCI$bootCI.l  <- NA
+    ESCI$bootCI.u  <- NA
+
+    if(esType=="Z.f"){
+      if(stat.test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
+        ID <- grep("d",colnames(ESCI))[1]
+        if(!is.na(ID)%00%NA){ESCI[,ID:NCOL(ESCI)] <- NA}
+        ESCI$bootR1    <- test$fZ.bootR1
+        ESCI$bootR2    <- test$fZ.bootR2
+        ESCI$bootCI.l  <- test$fZ.bootcCI.l
+        ESCI$bootCI.u  <- test$fZ.bootcCI.u
+        ESCI$r         <- test$fZ.r
+        ESCI$l.r       <- test$fZ.l.r
+        ESCI$u.r       <- test$fZ.u.r
+      }
+
+      ESCI$ncp       <- test$fZ.statistic
+      ESCI$ncp.lo    <- test$fZ.ncp.lo
+      ESCI$ncp.hi    <- test$fZ.ncp.hi
+      ESCI$cohensQ   <- test$fZ.cohensQ
+      ESCI$cohensQ.l <- test$fZ.cohensQ.l
+      ESCI$cohensQ.u <- test$fZ.cohensQ.u
+    }
+
+
+    ML2.ori$orig.stat.ncp[s]     <- ESCI$ncp%00%NA
+    ML2.ori$orig.stat.ncp.ciL[s] <- ESCI$ncp.lo%00%NA
+    ML2.ori$orig.stat.ncp.ciU[s] <- ESCI$ncp.hi%00%NA
     #ML2.ori$orig.stat.p.value
-    ML2.ori$orig.ES.d[s]         <- ESCI$d
-    ML2.ori$orig.ES.d.ciL[s]     <- ESCI$l.d
-    ML2.ori$orig.ES.d.ciU[s]     <- ESCI$u.d
-    ML2.ori$orig.ES.r[s]         <- ESCI$r
-    ML2.ori$orig.ES.r.ciL[s]     <- ESCI$l.r
-    ML2.ori$orig.ES.r.ciU[s]     <- ESCI$u.r
+    ML2.ori$orig.ES.d[s]         <- ESCI$d%00%NA
+    ML2.ori$orig.ES.d.ciL[s]     <- ESCI$l.d%00%NA
+    ML2.ori$orig.ES.d.ciU[s]     <- ESCI$u.d%00%NA
+    ML2.ori$orig.ES.r[s]         <- ESCI$r%00%NA
+    ML2.ori$orig.ES.r.ciL[s]     <- ESCI$l.r%00%NA
+    ML2.ori$orig.ES.r.ciU[s]     <- ESCI$u.r%00%NA
+    ML2.ori$orig.ES.cohensQ[s]     <- ESCI$cohensQ
+    ML2.ori$orig.ES.cohensQ.ciU[s] <- ESCI$cohensQ.u
+    ML2.ori$orig.ES.cohensQ.ciL[s] <- ESCI$cohensQ.l
 
     out[[cnt]] <- data.frame(
       study.id      = study.id,
@@ -668,12 +752,13 @@ get.oriESCI <- function(CL=.95){
 #' get.analyses
 #'
 #' @param studies    Numeric vector with unique study IDs listed in the `masteRkey` table (default = all IDs).
-#'  @param analysis.type An optional number indicating Global (1), Primary (2, default) or Secondary (3) analyses.
+#' @param analysis.type An optional number indicating Global (1), Primary (2, default) or Secondary (3) analyses.
 #' @param Nmin.raw     Minimum raw sample size allowed to be included in the analyses.
 #' @param Nmin.cond     Minimum sample size per condition allowed to be included in the analyses.
-#' @param subset  Can be "all","WEIRD" or "NON-WEIRD"
+#' @param subset  Can be "all","WEIRD" or "NONWEIRD"
 #' @param onlineTables  Download most recent online versions of \code{masteRkey} and \code{Source} information.
 #' @param staticData   Use data from external directory (see argument \code{indir})
+#' @param saveRdata Save data in `R` format. If `TRUE` a list object is expected with two fieldnames: `R_OBJECTS` and `RDS_RESULTS`, one for storing a seperate Robject for each analysis conducted, the other for storing a single data image containing the output returned by the function. An empty character vector will prevent saving any objects
 #' @param rootdir   which dir to look for data and files
 #' @param data.names   names of the datafiles for slate 1 and slate 2 (change e.g. if you study a custom subsample)
 #' @param indir   List of directories to use for different files. Change if you have files in different locations, but keep the list structure!
@@ -689,6 +774,7 @@ get.oriESCI <- function(CL=.95){
 #' @examples
 #' # Get the data from analysis 1 [Huang.1] listed on the \href{masteRkey spreadsheet}{https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/}
 #'
+#' library(dplyr)
 #' df <- get.analyses(studies = 1, analysis.type = 1)
 #'
 #' # 'raw' pre-filter dataset
@@ -699,25 +785,27 @@ get.oriESCI <- function(CL=.95){
 #'
 get.analyses <- function(studies       = NA,
                          analysis.type = NA,
-                         Nmin.raw  = 30,
-                         Nmin.cond = 15,
-                         subset    = c("all","WEIRD","NON-WEIRD")[1],
-                         onlineTables = TRUE,
-                         staticData   = FALSE,
-                         rootdir   = normalizePath(paste0(find.package("manylabRs"),ifelse(staticData,"/static_data","/data"))),
-                         data.names = list(Slate1 = ifelse(staticData,"ML2_Rawdata_S1_RData","ML2.S1"),
-                                           Slate2 = ifelse(staticData,"ML2_Rawdata_S2_RData","ML2.S2")),
-                         indir     = list(RAW.DATA = ifelse(staticData,"RAW.DATA.PRIVATE",""),
-                                          MASTERKEY = ifelse(onlineTables,"","MASTERKEY"),
-                                          SOURCEINFO = ifelse(onlineTables,"","SOURCEINFO")),
-                         outdir    = list(ROBJECTS = "ROBJECTS",
-                                          RESULTS.RDS = "RESULTS.RDS")){
+                         Nmin.raw      = 30,
+                         Nmin.cond     = 15,
+                         subset        = c("all","WEIRD","NONWEIRD")[1],
+                         onlineTables  = TRUE,
+                         staticData    = TRUE,
+                         saveRdata     = FALSE,
+                         rootdir   = normalizePath(paste0(find.package("manylabRs"))),
+                         indir     = list(RAW_DATA    = ifelse(staticData,file.path(rootdir,"extdata","RAW_DATA"),""),
+                                          MASTERKEY   = ifelse(onlineTables,"",file.path(rootdir,"extdata","KEYTABLES")),
+                                          SOURCE_INFO = ifelse(onlineTables,"",file.path(rootdir,"extdata","KEYTABLES"))),
+                         outdir    = list(R_OBJECTS   = ifelse(saveRdata, file.path(rootdir,"extdata","R_OBJECTS"),""),
+                                          RDS_RESULTS = ifelse(saveRdata, file.path(rootdir,"extdata","RESULTS_RDS"),"")),
+                         data.names = list(Slate1 = ifelse(staticData,file.path(rootdir,"extdata","RAW_DATA","ML2_Rawdata_S1.RData"),"ML2_S1"),
+                                           Slate2 = ifelse(staticData,file.path(rootdir,"extdata","RAW_DATA","ML2_Rawdata_S2.RData"),"ML2_S2"))){
 
-
-  paths <- unique(c(paste0(rootdir,"/",indir), paste0(rootdir,"/",outdir)))
-  for(d in paths[!dir.exists(paths)]){
-    dir.create(d, showWarnings = TRUE, recursive = FALSE, mode = "0777")
-  }
+  # require(lme4)
+  # require(lmerTest)
+  # paths <- unique(c(paste0(rootdir,"/",indir), paste0(rootdir,"/",outdir)))
+  # for(d in paths[!dir.exists(paths)]){
+  #   dir.create(d, showWarnings = TRUE, recursive = FALSE, mode = "0777")
+  # }
 
   tp  <- analysis.type
   wop <- options(warn=-1, expressions=10000)
@@ -728,32 +816,34 @@ get.analyses <- function(studies       = NA,
     ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
     disp(paste("Downloaded keytable Googlesheet: ML2_masteRkey [https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/]"), header = "get.analyses", footer = FALSE)
   } else {
-    ML2.key <- openxlsx::read.xlsx(file.path(rootdir,indir$MASTERKEY,"ML2_masteRkey.xlsx"),"ML2masteRkey")
-    disp(paste0("Loaded keytable from disk: ML2_masteRkey.xlsx [",file.path(rootdir,indir$MASTERKEY),"]"), header = "get.analyses", footer = FALSE)
+    ML2.key <- openxlsx::read.xlsx(file.path(normalizePath(indir$MASTERKEY),"ML2_masteRkey.xlsx"))
+    disp(paste0("Loaded keytable from disk: ML2_masteRkey.xlsx [",normalizePath(indir$MASTERKEY),"]"), header = "get.analyses", footer = FALSE)
   }
-
   ML2.key <- ML2.key[!is.na(ML2.key$unique.id),]
 
   # Load data
-  if(indir$RAW.DATA==""){
+  if(indir$RAW_DATA==""){
     #ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
-    data("ML2.S1","ML2.S2")
-    S1loaded <-is.data.frame(ML2.S1)
-    S2loaded <-is.data.frame(ML2.S2)
-    #disp(paste("Downloaded data from OSF: ",data.names$Slate1," and ",data.names$Slate2,""), header = FALSE, footer = FALSE)
-    disp("Using internal data...", header = FALSE, footer = FALSE)
+    # data("ML2_S1","ML2_S2")
+    # S1loaded <-is.data.frame(ML2_S1)
+    # S2loaded <-is.data.frame(ML2_S2)
+    ML2_S1 <- get.OSFfile()
+    ML2_S2 <- get.OSFfile()
+    disp(paste("Downloaded data from OSF: ",data.names$Slate1," and ",data.names$Slate2,""), header = FALSE, footer = FALSE)
+
   } else {
-    ML2.S1 <- readRDS(file.path(rootdir,indir$RAW.DATA,data.names$Slate1))
-    ML2.S2 <- readRDS(file.path(rootdir,indir$RAW.DATA,data.names$Slate2))
-    disp(paste0("Loaded data from disk: ",data.names$Slate1," and ",data.names$Slate1,"[",file.path(rootdir,indir$RAW.DATA),"]"), header = FALSE, footer = FALSE)
+    load(normalizePath(data.names$Slate1))
+    load(normalizePath(data.names$Slate2))
+    disp("Using data in /manylabRs/extdata/...", header = FALSE, footer = FALSE)
+    #disp(paste0("Loaded data from disk: ",data.names$Slate1," and ",data.names$Slate1,"[",file.path(rootdir,indir$RAW.DATA),"]"), header = FALSE, footer = FALSE)
   }
 
   # Load information about sources
-  if(indir$SOURCEINFO==""|onlineTables){
+  if(indir$SOURCE_INFO==""|onlineTables){
     SourceInfoTable    <- get.GoogleSheet(url = "https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/pub?gid=1435507167&single=true&output=csv")$df
     disp(paste("Downloaded information about the data sources from Googlesheet: 'ML2_SourceInfo.xlsx' [https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/]"), header = FALSE, footer = FALSE)
   } else {
-    SourceInfoTable    <- readRDS(file.path(rootdir,indir$SOURCEINFO,"ML2_SourceInfo.xlsx"))
+    SourceInfoTable    <- openxlsx::read.xlsx(file.path(normalizePath(indir$SOURCE_INFO),"ML2_SourceInfo.xlsx"), sheet = "ML2_SourceInfo")
     disp(paste0("Loaded information about the data sources from disk: 'MML2_SourceInfo.xlsx' [",file.path(rootdir,indir$SOURCEINFO),"]"), header = FALSE, footer = FALSE)
   }
 
@@ -777,9 +867,9 @@ get.analyses <- function(studies       = NA,
   for(s in studs){
 
     # Get the correct slate according to info in ML2.key['study.slate']
-    if(ML2.key[s,'study.slate'] == 1){ML2.df <- ML2.S1
+    if(ML2.key[s,'study.slate'] == 1){ML2.df <- ML2_S1
     } else {
-      ML2.df <- ML2.S2
+      ML2.df <- ML2_S2
     }
 
     # Add a unique ID
@@ -839,7 +929,6 @@ get.analyses <- function(studies       = NA,
 
       # START GROUPS ----------------------------------------------
 
-
       for(g in seq_along(runGroups)){
 
         listIT     <- FALSE
@@ -848,7 +937,11 @@ get.analyses <- function(studies       = NA,
         compN <- compN1 <- compN2 <- 0
 
         if(tp[cnt]<4){
-          if(runGroups[g]=="all"){gID <- rep(TRUE, nrow(ML2.df))} else {gID <- ML2.df$source%in%runGroups[g]}
+          if(runGroups[g]=="all"){
+            gID <- rep(TRUE, nrow(ML2.df))
+          } else {
+              gID <- ML2.df$source%in%runGroups[g]
+              }
         } else {
           gID <-  ML2.df$study.order%in%runGroups[g]
         }
@@ -896,13 +989,28 @@ get.analyses <- function(studies       = NA,
             listIT     <- TRUE
           }
 
+          if(listIT){
+
+          describe <- get.descriptives(stat.test = stat.test,
+                                       vars      = ML2.var[[g]],
+                                       keytable  = ML2.key[s,])
+
+          if(any(describe$descr.raw$n<Nmin.cond)){
+            listIT<- FALSE
+            nMin2 <- FALSE
+          }
+
+          rm(describe)
+
+          }
+
           # START RECORD DATA -------------------------------------
 
           if(listIT){
 
             describe <- get.descriptives(stat.test = stat.test,
-                                        vars      = ML2.var[[g]],
-                                        keytable  = ML2.key[s,])
+                                         vars      = ML2.var[[g]],
+                                         keytable  = ML2.key[s,])
 
             var.lor <- ifelse(grepl("OR",describe$test$estype),
                               sum(1/(table(ML2.var[[g]]$Condition,ML2.var[[g]]$Response)), na.rm = TRUE),
@@ -912,6 +1020,8 @@ get.analyses <- function(studies       = NA,
                                       var.lor         = var.lor,
                                       runningGroup    = runGroups[g],
                                       runningAnalysis = paste(s,ML2.key$study.analysis[[s]]))
+
+            #colnames(describe$test) <- gsub("fZ[.]","",colnames(describe$test))
 
             # Raw and clean datasets
 
@@ -926,13 +1036,14 @@ get.analyses <- function(studies       = NA,
             }
 
 
-
-
             if(tp<4){
+
               if(runGroups[g]!="all"){
+
                 fID <- unique(ML2.df$.id[ML2.df$source==runGroups[g]])
                 sID <- SourceInfoTable$Source%in%runGroups[g]&SourceInfoTable$Filename%in%fID
                 if(sum(sID)==1){
+
                   SourceInfo1 <- SourceInfoTable[sID, ]
                   SourceInfo2 <- raw.df[[g]] %>% dplyr::filter(case.include) %>% group_by(source) %>%
                     dplyr::summarise(
@@ -960,7 +1071,8 @@ get.analyses <- function(studies       = NA,
                   SourceInfo<-cbind(SourceInfo1,SourceInfo2)
                   # colnames(SourceInfo) <- c("name","name.Global",colnames(SourceInfoTable)[3:NCOL(SourceInfoTable)])
                 }
-              } else {
+
+              } else { # tp < 4 & rungroups == all
 
                 SourceInfo <- raw.df[[g]] %>% dplyr::filter(case.include) %>%
                   dplyr::summarise(
@@ -986,7 +1098,8 @@ get.analyses <- function(studies       = NA,
                     N.cases.excluded  = sum(raw.df[[g]]$case.include==FALSE,na.rm=TRUE)
                   )
               }
-            } else {
+            } else { # tp < 4
+
               SourceInfo <- raw.df[[g]] %>% dplyr::filter(case.include) %>%
                 dplyr::summarise(
                   N.sources.global    = length(unique(Source.Global)),
@@ -1048,12 +1161,14 @@ get.analyses <- function(studies       = NA,
             colnames(clean.df[[g]])[colnames(clean.df[[g]])==".id"] <- "Condition"
 
             rm(stat.params)
-          } else {# LISTIT
+          } else { # LISTIT
             cat("\nListIT = FALSE\n")
+            if(!is.null(stat.test$value)){
+
             if(grepl("observations",as.character(stat.test$value))){
               disp(paste(s, ML2.key$study.analysis[[s]],'-',
                          runGroups[g],'>> Not enough observations'),
-                   header = FALSE, footer = FALSE)
+                   header = FALSE, footer = FALSE)}
             } else {
               disp(paste(s,ML2.key$study.analysis[[s]],'-', runGroups[g],'>> stat.test failed:'),
                    header = FALSE, footer = FALSE)
@@ -1098,8 +1213,8 @@ get.analyses <- function(studies       = NA,
       ML2.output[[s]]  <- plyr::ldply(outputSource)
       ML2.rawdata[[s]] <- plyr::ldply(raw.df)
 
-      if(outdir$ROBJECTS!=""){
-        save(dataSource, file = file.path(rootdir,outdir$ROBJECTS,paste0(ML2.key$study.analysis[[s]],"_",c("Global","Primary","Secondary","Order")[tp[cnt]],".RData")))
+      if(outdir$R_OBJECTS!=""){
+        save(dataSource, file = file.path(normalizePath(outdir$R_OBJECTS),paste0(ML2.key$study.analysis[[s]],"_",c("Global","Primary","Secondary","Order")[tp[cnt]],".RData")))
       }
 
       rm(ML2.in, ML2.var, ML2.id, ML2.df, ML2.sr, outputSource, dataSource, raw.df, clean.df, descr, SourceInfo, nMin1, nMin2, listIT)
@@ -1115,6 +1230,19 @@ get.analyses <- function(studies       = NA,
     }
 
   } # for s i studies
+
+  if(outdir$RDS_RESULTS!=""){
+
+  fname <- c(file.path(normalizePath(outdir$RDS_RESULTS),paste0("ML2_results_global_",subset,".rds")),
+             file.path(normalizePath(outdir$RDS_RESULTS),paste0("ML2_results_primary_",subset,".rds")),
+             file.path(normalizePath(outdir$RDS_RESULTS),paste0("ML2_results_secondary_",subset,".rds")),
+             file.path(normalizePath(outdir$RDS_RESULTS),paste0("Data_Figure_StudyOrder_",subset,".rds")))[tp]
+
+  saveRDS(list(raw.case   = ML2.rawdata,
+               aggregated = ML2.output),file=fname)
+
+  disp(message = paste0("Saved RDS list object with data and ananlysis results to:\n",fname))
+  }
 
   options(wop)
   return(list(raw.case   = ML2.rawdata,
@@ -1202,14 +1330,8 @@ get.GoogleSheet <- function(url=NULL,data=c('ML1data','ML2masteRkey','ML2data')[
 #'
 #' @examples
 #' #Get the RP:P data hosted on OSF.
-#' dfRPP <- get.OSFfile(code='https://osf.io/fgjvw/', dfCln=TRUE)$df
+#' \dontrun{dfRPP <- get.OSFfile(code='https://osf.io/fgjvw/', dfCln=TRUE)$df}
 get.OSFfile <- function(code, dir = tempdir(), scanMethod, downloadMethod = c("httr","downloader","curl"), dataSet = TRUE, dfCln = FALSE){
-  # require(bitops)
-  # require(RCurl)
-  # require(downloader)
-  # require(httr)
-  # require(rio)
-  # require(dplyr)
 
   # Check if input is code:
   if (!grepl("osf\\.io",code)){
@@ -1395,7 +1517,7 @@ get.Order <- function(df, S1=TRUE){
 
 #' get.zavCode
 #'
-#' @param df    Dataset: ML2.S2
+#' @param df    Dataset: ML2_S2
 #' @param lookup     The lookup table
 #'
 #' @return The code for each sentence.
@@ -1435,15 +1557,16 @@ get.zavCode <- function(df = NULL, lookup = NULL){
 #'
 #' @export
 #'
-get.descriptives <- function(stat.test, vars, keytable){
+get.descriptives <- function(stat.test, vars=NA, keytable, testOnly = FALSE){
 
-  if(class(stat.test)=="htest.fisherz"){
-    tmp <- unclass(stat.test)
-    stat.test <- tmp[1:8]
-    stat.test$estimate <- tanh(tmp$effect.size[[1]])
-    stat.test$conf.int <- c(tanh(tmp$effect.size.ci[[1]]),tanh(tmp$effect.size.ci[[2]]))
+  tidy.stat.test <- stat.test
+  if("htest.fisherZ"%in%class(tidy.stat.test)){
+    tmp <- unclass(tidy.stat.test)
+    tidy.stat.test <- tmp[1:8]
+    tidy.stat.test$estimate <- tanh(tmp$effect.size[[1]])
+    tidy.stat.test$conf.int <- c(tanh(tmp$effect.size.ci[[1]]),tanh(tmp$effect.size.ci[[2]]))
+    class(tidy.stat.test) <- "htest"
     #attr(stat.test$conf.int,"conf.level")
-    class(stat.test) <- "htest"
   }
 
   # if(grepl("lm",esType)){
@@ -1453,16 +1576,18 @@ get.descriptives <- function(stat.test, vars, keytable){
   esType <- gsub("lm[.]","",keytable$stat.type)
 
 
-  # Descriptive structures ------------------------------------------------------------------------------------------
+   if(!testOnly){
+  # Descriptive structures ---------------------
+
   N <- vars$N
   vars$N <- NULL
 
   if(any(names(vars) == "df")){vars$df <- NULL}
 
-  if(any(names(stat.test) == "method")){
-    method = stat.test$method
+  if(any(names(tidy.stat.test) == "method")){
+    method = tidy.stat.test$method
   } else {
-    method <- class(stat.test)[1]
+    method <- class(tidy.stat.test)[1]
   }
 
   if(any(plyr::laply(vars,is.factor))){
@@ -1475,12 +1600,14 @@ get.descriptives <- function(stat.test, vars, keytable){
         )}
       )
 
-      id        <- unlist(colwise(is.factor)(as.data.frame(vars)))
+      id        <- unlist(plyr::colwise(is.factor)(as.data.frame(vars)))
       tmp       <- as.data.frame(vars)
       Cid <- which(grepl("(ID)",colnames(tmp)))
       if(length(Cid)!=0){tmp  <- select(tmp, -Cid)}
-      descr.raw <- ddply(tmp, names(tmp)[id], broom::tidy)
+      descr.raw <- plyr::ddply(tmp, names(tmp)[id], broom::tidy)
       descr.raw <- descr.raw[!grepl("[*]",descr.raw$column), ]
+
+      colnames(descr.raw)[colnames(descr.raw)%in%names(id)[id]] <- paste("name")
     }
 
     if((esType=="X2")|(grepl("OR",esType))){
@@ -1505,15 +1632,37 @@ get.descriptives <- function(stat.test, vars, keytable){
 
     colnames(descr.sum)[colnames(descr.sum)==".id"] <- "name"
 
+    #tmpvars <- vars[lengths(vars)>1]
     descr.raw  <- plyr::ldply(vars, function(ignore){
-      #if(is.list(gd)){gd<-unlist(gd)}
+      #if(is.list(ignore)){ignore<-unlist(ignore)}
       if(!is.data.frame(ignore)){ignore <- data.frame(ignore)}
-      return(broom::tidy(ignore))})
+      if(NCOL(ignore)==1){
+        cname <- colnames(ignore)
+        ignore <- data.frame(ignore,NA)
+        colnames(ignore) <- c(cname,"remove")
+      }
+      out <- broom::tidy(ignore)
+      out <- filter(out,column != "remove")
+      return(out)
+        })
 
     colnames(descr.raw)[colnames(descr.raw)==".id"] <- "name"
-  }
+    if(any(descr.raw$n==1)&esType=="t.p"){descr.raw$n[descr.raw$n==1]<-N}
 
-  # Test structure --------------------------------------------------------------------------------------------------
+    #colnames(descr.raw)[colnames(descr.raw)=="column"] <- "name"
+
+#     if(esType=="t.p"){
+#     descr.raw$n <- N
+ }
+    #
+    #   descr.raw <- summary(descr.raw$x)
+    #   descr.raw <- as.data.frame(unlist(descr.raw))
+    #   descr.raw$n <- N
+    # }
+
+  } #testonly
+
+  # Test structure --------------------
 
   if(esType=="f"|grepl("lm",keytable$stat.type)){
 
@@ -1530,7 +1679,7 @@ get.descriptives <- function(stat.test, vars, keytable){
 
   } else {
 
-    suppressMessages(test <- broom::tidy(stat.test))
+    suppressMessages(test <- broom::tidy(tidy.stat.test))
 
     if(esType=="OR"){
       test$parameter <- NA
@@ -1578,46 +1727,40 @@ get.descriptives <- function(stat.test, vars, keytable){
 
   return(list(descr.raw = descr.raw,
               descr.sum = descr.sum,
-              test      = test)
+              test      = test)[c(!testOnly,!testOnly,TRUE)]
   )
 }
 
-get.packageData <- function(){
-  # Internal use only
-  # Load Key Table
-  ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
 
-  # Load data
-  setwd("~/Dropbox/Manylabs2/TestOutput/RAW.DATA.PRIVATE")
-  ML2.Slate1 <- readRDS("ML2_RawData_S1.rds")
-  ML2.Slate2 <- readRDS("ML2_RawData_S2.rds")
-
-  # Prepare list objects
-  ML2.data <- list()
-
-  for(s in 1:2){
-    vnames <- list()
-    for(r in 1:sum(ML2.key$study.slate==s, na.rm = TRUE)){
-      vnames[[r]] <- unlist(eval(parse(text=ML2.key$study.vars[ML2.key$study.slate==s][[r]])), use.names = FALSE)
-    }
-    ML2.data[[s]] <- unique(unlist(vnames))
-  }
-
-  ML2.S1 <- dplyr::select(ML2.Slate1, one_of(c(".id", "Source.Global", "Source.Primary", "Source.Secondary", "Country" , "Language", "Execution", "SubjectPool", "Setting", "Tablet", "Pencil", "StudyOrder", "IDiffOrder","StudyOrderN", "IDiffOrderN", ML2.data[[1]]))
-  )
-
-  ML2.S2 <- dplyr::select(ML2.Slate2, one_of(c(".id", "Source.Global", "Source.Primary", "Source.Secondary", "Country", "Language", "Execution", "SubjectPool", "Setting", "Tablet", "Pencil", "StudyOrder", "IDiffOrder", "StudyOrderN", "IDiffOrderN", ML2.data[[2]]))
-  )
-
-  setwd("~/Library/Mobile Documents/com~apple~CloudDocs/GitHub/ManyLabRs/manylabRs")
-  devtools::use_data(ML2.S1, ML2.S2, overwrite = TRUE)
-}
-
-
-
+#' get.output
+#'
+#' @param key key
+#' @param vars vars
+#' @param descr descr
+#' @param group group
+#' @param analysis analysis
+#' @param varEqual varEqual
+#' @param test test
+#' @param ESCI ESCI
+#' @param test.ConsoleOutput test.ConsoleOutput
+#' @param SourceInfo SourceInfo
+#' @param stat.test stat.test
+#'
+#' @return output
+#' @export
+#'
 get.output <- function(key, vars, descr, group, analysis, varEqual, test, ESCI, test.ConsoleOutput, SourceInfo, stat.test){
 
-  if(key$stat.type == "OR"){
+  if(key$stat.type%in%c("OR","lm.OR")){
+    test.table    = table(vars$Condition,vars$Response)
+
+    descr$value  <- NA
+    descr$value[descr$count%in%test.table[,colnames(test.table)[1]]] <- colnames(test.table)[1]
+    descr$value[descr$count%in%test.table[,colnames(test.table)[2]]] <- colnames(test.table)[2]
+    descr$mean <- descr$prop.cond
+    sd   <- try.CATCH(sqrt((1-descr$prop.cond)*descr$prop.cond))
+    if(is.numeric(sd$value)){sd <- sd$value} else {sd <- NA}
+
     # Data list for calculating Effect Sizes CI based on NCP
     output <- data.frame(
       study.id      = key$study.id,
@@ -1641,9 +1784,9 @@ get.output <- function(key, vars, descr, group, analysis, varEqual, test, ESCI, 
       test.ConsoleOutput = test.ConsoleOutput,
       source        = SourceInfo
     )
-  }
+  } else {
 
-  if(key$stat.type!="OR"){
+  # if(key$stat.type"OR"){
     # Data list for calculating Effect Sizes CI based on NCP
     # output <- data.frame(
     #     study.id      = key$study.id,
@@ -1666,13 +1809,34 @@ get.output <- function(key, vars, descr, group, analysis, varEqual, test, ESCI, 
       eval(parse(text = paste0("stat.cond",r," =  descr[r, ]",colapse="")))
     }
 
-    eval(parse(text=paste0("output <- data.frame(study.id = key$study.id, study.slate = key$study.slate, study.name = key$study.name, study.source  = group, analysis.type = analysis, analysis.name = key$study.analysis, stat.N = sum(vars$N, na.rm = T), stat.n1 = ifelse(length(vars$N)==2,vars$N[[1]],vars$N), stat.n2 = ifelse(length(vars$N)==2,vars$N[[2]],NA), ", paste0("stat.cond",1:nrow(descr)," = ","stat.cond",1:nrow(descr), collapse = ", "),", test.type = key$stat.type, test = test, test.varequal = varEqual, ESCI = ESCI, test.ConsoleOutput = test.ConsoleOutput, source = SourceInfo)", collapse = ", ")))
+    eval(parse(text=paste0("output <- data.frame(study.id = key$study.id, study.slate = key$study.slate, study.name = key$study.name, study.source  = group, analysis.type = analysis, analysis.name = key$study.analysis, stat.N = sum(vars$N, na.rm = T), stat.n1 = ifelse(length(vars$N)==2,vars$N[[1]],vars$N), stat.n2 = ifelse(length(vars$N)==2,vars$N[[2]],NA), ", paste0("stat.cond",1:nrow(descr)," = ","stat.cond",1:nrow(descr), collapse = ", "),", test.type = key$stat.type, test = test, test.varequal = varEqual,test.ConsoleOutput = test.ConsoleOutput, ESCI = ESCI, source = SourceInfo)", collapse = ", ")))
   }
 
-  return(output)
+  clean_out <- OutputTemplate()
+
+  colnames(output)<-gsub("test.fZ","test",colnames(output))
+  names_both <- colnames(clean_out)[colnames(clean_out)%in%colnames(output)]
+
+  clean_out[,names_both] <- output[,names_both]
+
+  names_missing <- colnames(output)[!colnames(output)%in%colnames(clean_out)]
+
+  if(!all(grepl("fZ",names_missing))){
+     warning(paste(names_missing,collapse = " | "))
+  }
+  return(clean_out)
 }
 
 
+#' decide.analysis
+#'
+#' @param ML2.key Key
+#' @param studies studies
+#' @param tp analysis type
+#'
+#' @return list of studies
+#' @export
+#'
 decide.analysis <- function(ML2.key, studies=NA, tp = NA){
 
   analysis <- c('study.global.include', 'study.primary.include', 'study.secondary.include','study.global.include')
@@ -1700,7 +1864,6 @@ decide.analysis <- function(ML2.key, studies=NA, tp = NA){
     studiess <- unlist(studiess)
   }
 
-
   tp           <- tps[!is.na(studiess)&studiess%in%studies]
 
   if(any(is.na(studiess[!is.na(studiess)&studiess%in%studies]))){stop("Analysis ID and analysis type do not agree [e.g. analysis type is 'primary', but analysis ID refers to 'secondary']")}
@@ -1723,6 +1886,8 @@ decide.analysis <- function(ML2.key, studies=NA, tp = NA){
 #' @param tp      Analysis type (1 = 'study.global.include', 2 = 'study.primary.include', 3 = 'study.secondary.include').
 #' @param saveRDSfile     Save an RDS file of the output.
 #'
+#' @export
+#' @keywords internal
 #'
 testScript <- function(studies,
                        tp,
@@ -1731,25 +1896,30 @@ testScript <- function(studies,
                        subset = c("all","WEIRD","NONWEIRD")[1],
                        dir.out = "~/Dropbox/Manylabs2/TestOutput"){
 
-  analysis  <- c('study.global.include', 'study.primary.include', 'study.secondary.include', 'study.by.order')
+  analysis  <- c('study_global_include', 'study_primary_include', 'study_secondary_include', 'study_by_order')
+  #studies = gsub("[_]+",".",analysis)
+  if(dplyr::between(tp,2,3)){
+    cat("\nsetting subset to all\n")
+    subset <- "all"}
 
-  if(between(tp,2,3)){subset="all"}
   dfout <- get.analyses(studies = studies, analysis.type = tp, subset = subset)
+
+  if(tp==4){subset <- "by_order"}
 
   ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
 
   if(saveRDSfile){
-    fname <- c(paste0(dir.out,"/RESULTS.RDS/ML2_results_global_",subset,".rds"),
-               paste0(dir.out,"/RESULTS.RDS/ML2_results_primary_",subset,".rds"),
-               paste0(dir.out,"/RESULTS.RDS/ML2_results_secondary_",subset,".rds"),
-               paste0(dir.out,"/RESULTS.RDS/Data_Figure_StudyOrder_",subset,".rds"))[tp]
+    fname <- c(file.path(normalizePath(dir.out),"RESULTS_RDS",subset,paste0("ML2_results_global_",subset,".rds")),
+               file.path(normalizePath(dir.out),"RESULTS_RDS",subset,paste0("ML2_results_primary_",subset,".rds")),
+               file.path(normalizePath(dir.out),"RESULTS_RDS",subset,paste0("ML2_results_secondary_",subset,".rds")),
+               file.path(normalizePath(dir.out),"RESULTS_RDS","by_order",paste0("Data_Figure_StudyOrder_",subset,".rds")))[tp]
     cat(paste0("\nSaving list object with analyses...\n"))
     # only save non-empty objects
 
     saveRDS(dfout,file=fname)
   }
 
-  #setwd(dir.out)
+   #setwd(dir.out)
 
   if(saveCSVfile){
     cat(paste0("\nSaving raw cases...\n"))
@@ -1757,45 +1927,52 @@ testScript <- function(studies,
           function(d){
             if(!is.null(dfout$raw.case[[d]])&NCOL(dfout$raw.case[[d]])>0){
               rio::export(dfout$raw.case[[d]],
-                          file = paste0(dir.out,"/RAW.CASE/", names(dfout$raw.case)[d],".",analysis[[tp]],".","RAW.CASE_",subset,".csv"))
+                          file = file.path(normalizePath(dir.out),"RAW_CASE",subset, paste0(names(dfout$raw.case)[d],"_",analysis[[tp]],"_RAW_CASE_",subset,".csv")))
             }
           })
+    }
 
     if(tp==1){
       cat(paste0("\nSaving global results...\n"))
-      l_ply(seq_along(dfout$merged.results),
-            function(d){
-              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
-                rio::export(dfout$merged.results[[d]],
-                            file = paste0(dir.out,"/GLOBAL/",
-                                          names(dfout$merged.results)[d],".", analysis[[tp]],"_",subset,".csv"))}})}
+    }
 
     if(between(tp,2,3)){
       cat(paste0("\nSaving by_group results...\n"))
-      l_ply(seq_along(dfout$merged.results),
+
+      l_ply(seq_along(dfout$aggregated),
             function(d){
-              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
+              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$aggregated[[d]])>0){
                 rio::export(dfout$merged.results[[d]],
-                            paste0(dir.out,"/AGGREGATE/",
-                                   names(dfout$merged.results)[d],".", analysis[[tp]],".csv"))}})}
+                            paste0(dir.out,"/RESULTS_ANALYSIS/",subset,"/",
+                                 names(dfout$merged.results)[d],"_", analysis[[tp]],".csv"))}})
+      }
+
     if(tp==4){
       cat(paste0("\nSaving by_order results...\n"))
-      l_ply(seq_along(dfout$merged.results),
-            function(d){
-              if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
-                rio::export(dfout$merged.results[[d]],
-                            paste0(dir.out,"/ORDER/",
-                                   names(dfout$merged.results)[d],".", analysis[[tp]],"_",subset,".csv"))}})}
-  }
+    }
+
+l_ply(seq_along(dfout$aggregated),
+      function(d){
+        if(!is.null(dfout$aggregated[[d]])&NCOL(dfout$aggregated[[d]])>0){
+          rio::export(dfout$aggregated[[d]],
+                      file = file.path(normalizePath(dir.out),"RESULTS_ANALYSIS",subset,paste0(names(dfout$aggregated)[d],"_", analysis[[tp]],"_",subset,".csv")))}})
+
+
+      # l_ply(seq_along(dfout$merged.results),
+      #       function(d){
+      #         if(!is.null(dfout$merged.results[[d]])&NCOL(dfout$merged.results[[d]])>0){
+      #           rio::export(dfout$merged.results[[d]],
+      #                       paste0(dir.out,"/RESULTS_ANALYSIS/by_order/",
+      #                              names(dfout$merged.results)[d],"_", analysis[[tp]],"_",subset,".csv"))}})}}
 
   if(saveRDSfile){
-    all <- plyr::ldply(dfout$merged.results)
-
+    all <- plyr::ldply(dfout$aggregated)
     if(!is.null(all)&NCOL(all)>0){
-      rio::export(all, paste0(dir.out,"/GLOBAL/ALL_",analysis[[tp]],"_",subset,".csv"))
-      rio::export(all, paste0(dir.out,"/GLOBAL/ALL_",analysis[[tp]],"_",subset,".xlsx"))
+      rio::export(all, file.path(normalizePath(dir.out),"RESULTS_RDS",paste0("ALL_",analysis[[tp]],"_",subset,".csv")))
+      rio::export(all, file.path(normalizePath(dir.out),"RESULTS_RDS",paste0("ALL_",analysis[[tp]],"_",subset,".xlsx")))
     }
   }
+
 }
 
 
@@ -1814,7 +1991,8 @@ testScript <- function(studies,
 generateOutput <-  function(describe = describe,
                             var.lor  = NA,
                             runningGroup = "None",
-                            runningAnalysis = "None"){
+                            runningAnalysis = "None",
+                            stat.test = stat.test){
 
   ESCI <- list(value = NULL,
                warning = "init")
@@ -1822,15 +2000,23 @@ generateOutput <-  function(describe = describe,
   test  = describe$test
   descr = describe$descr.raw
 
+  if(test$estype=="t.p"){
+    Nv <- as.numeric(NROW(descr))
+  } else {
   if(grepl("OR",test$estype, fixed = TRUE)){
     Nv <- c(descr$n[1],descr$n[3])
   } else {
-    if(grepl("Z",test$estype, fixed=TRUE)){
-      Nv <- c(descr$n[1]+descr$n[3],descr$n[2]+descr$n[4])
-    } else {
+    if(NROW(descr$n)==2){
       Nv <- c(descr$n[1],descr$n[2])
+    } else {
+      Nv <- c(descr$n[1]+descr$n[3],descr$n[2]+descr$n[4])
     }
   }
+  }
+
+if(is.null(test$method)){
+  test$method <- test$estype
+}
 
   if(!is.na(test[1,1])){
 
@@ -1850,6 +2036,7 @@ generateOutput <-  function(describe = describe,
     ))
   }
 
+
   if(all(is.null(ESCI$warning),
          grepl("simpleWarning",ESCI$warning),
          !grepl("Error", ESCI$value[[1]]),
@@ -1858,8 +2045,13 @@ generateOutput <-  function(describe = describe,
     ESCI  <- ESCI$value
     es.id <- which(colnames(ESCI)%in%"r")
   } else {
+    if(is.data.frame(ESCI$value)){
+      ESCI  <- ESCI$value
+      es.id <- which(colnames(ESCI)%in%"r")
+    } else {
     ESCI  <- test
     es.id <- 1
+    }
   }
 
   ifelse(is.na(ESCI[es.id]),
@@ -1896,14 +2088,12 @@ generateOutput <-  function(describe = describe,
   ESCI$bootCI.u  <- NA
 
   if(test$estype=="Z.f"){
-    ESCI$ncp       <- test$fZ.statistic
-    ESCI$ncp.lo    <- test$fZ.ncp.lo
-    ESCI$ncp.hi    <- test$fZ.ncp.hi
-    ESCI$cohensQ   <- test$fZ.effect.size
-    ESCI$cohensQ.l <- test$fZ.effect.size.ci[1]
-    ESCI$cohensQ.u <- test$fZ.effect.size.ci[2]
+
+
+
     if(test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
-      ESCI[,which(colnames(ESCI)=="d"):NCOL(ESCI)] <- NA
+      ID <- grep("d",colnames(ESCI))[1]
+      if(!is.na(ID)%00%NA){ESCI[,ID:NCOL(ESCI)] <- NA}
       ESCI$bootR1    <- test$fZ.bootR1
       ESCI$bootR2    <- test$fZ.bootR2
       ESCI$bootCI.l  <- test$fZ.bootcCI.l
@@ -1912,8 +2102,3614 @@ generateOutput <-  function(describe = describe,
       ESCI$l.r       <- test$fZ.l.r
       ESCI$u.r       <- test$fZ.u.r
     }
+
+    ESCI$ncp       <- test$fZ.statistic
+    ESCI$ncp.lo    <- test$fZ.ncp.lo
+    ESCI$ncp.hi    <- test$fZ.ncp.hi
+    ESCI$cohensQ   <- test$fZ.cohensQ
+    ESCI$cohensQ.l <- test$fZ.cohensQ.l
+    ESCI$cohensQ.u <- test$fZ.cohensQ.u
   }
 
   return(ESCI)
 }
+
+# FREDSRUTILS ----
+
+#' gg.theme
+#'
+#' A gg theme
+#'
+#' @param type One of \code{clean}, or \code{noax}
+#' @param useArial Use the Arial font (requires \code{.afm} font files in the \code{afmPath})
+#' @param afmPATH Path to Arial \code{.afm} font files.
+#'
+#'
+#' @details Will generate a \code{clean} ggplot theme, or a theme without any axes (\code{noax}).
+#'
+#' Some scientific journals explicitly request the Arial font should be used in figures.
+#' This can be achieved by using \code{.afm} font format (see, e.g. \url{http://www.pure-mac.com/font.html}).
+#'
+#' @return A theme for \code{ggplot2}.
+#'
+#' @export
+#'
+#' @examples
+#' library(ggplot2)
+#' g <- ggplot(data.frame(x = rnorm(n = 100), y = rnorm(n = 100)), aes(x = x, y = y)) + geom_point()
+#' g + gg.theme()
+#' g + gg.theme("noax")
+#'
+gg.theme <- function(type=c("clean","noax"),useArial = FALSE, afmPATH="~/Dropbox"){
+
+  if(length(type)>1){type <- type[1]}
+
+  if(useArial){
+    set.Arial(afmPATH)
+    bf_font="Arial"
+  } else {bf_font="Helvetica"}
+
+  switch(type,
+         clean = ggplot2::theme_bw(base_size = 12, base_family=bf_font) +
+           theme(axis.text.x     = element_text(size = 10),
+                 axis.title.y    = element_text(vjust = +1.5),
+                 panel.grid.major  = element_blank(),
+                 panel.grid.minor  = element_blank(),
+                 legend.background = element_blank(),
+                 legend.key = element_blank(),
+                 panel.border = element_blank(),
+                 panel.background = element_blank(),
+                 axis.line  = element_line(colour = "black")),
+         noax = ggplot2::theme(line = element_blank(),
+                               text  = element_blank(),
+                               title = element_blank(),
+                               plot.background = element_blank(),
+                               panel.border = element_blank(),
+                               panel.background = element_blank())
+  )
+}
+
+#' gg.plotHolder
+#'
+#' @param useArial    Use the Arial font (requires \code{.afm} font files in the \code{afmPath})
+#' @param afmPATH    Path to Arial \code{.afm} font files.
+#'
+#' @return A blank \code{ggplot2} object that can be used in concordance with \code{grid.arrange}.
+#' @export
+#'
+#' @examples
+#' # Create a plot with marginal distributions.
+#' library(ggplot2)
+#' library(scales)
+#'
+#' df <- data.frame(x = rnorm(n = 100), y = rnorm(n = 100),
+#'                  group = factor(sample(x=c(0,1),
+#'                  size = 100, replace = TRUE))
+#'                  )
+#'
+#' scatterP <- ggplot(df, aes(x = x, y =y, colour = group)) +
+#'             geom_point() +
+#'             gg.theme()
+#'
+#' xDense <- ggplot(df, aes(x = x, fill = group)) +
+#'           geom_density(aes(y= ..count..),trim=FALSE, alpha=.5) +
+#'           gg.theme("noax") +
+#'           theme(legend.position = "none")
+#'
+#' yDense <- ggplot(df, aes(x = y, fill = group)) +
+#'           geom_density(aes(y= ..count..),trim=FALSE, alpha=.5) +
+#'           coord_flip() +
+#'           gg.theme("noax") +
+#'           theme(legend.position = "none")
+#'
+#' library(gridExtra)
+#'
+#' grid.arrange(xDense,
+#'              gg.plotHolder(),
+#'              scatterP,
+#'              yDense,
+#'              ncol=2, nrow=2,
+#'              widths=c(4, 1.4), heights=c(1.4, 4)
+#'              )
+#'
+gg.plotHolder <- function(useArial = F,afmPATH="~/Dropbox"){
+  # require(ggplot2)
+  ggplot2::ggplot() +
+    geom_blank(aes(1,1)) +
+    theme(line = element_blank(),
+          text  = element_blank(),
+          title = element_blank(),
+          plot.background = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank()
+    )
+}
+
+#' fill_viol
+#'
+#' @details  Function to create geom_ploygon calls for \code{\link{vioQtile}}
+#'
+#' @param gr.df Internal.
+#' @param gr Internal.
+#' @param qtile Internal.
+#' @param probs Internal.
+#'
+#' @return A list for \code{\link{vioQtile}}
+#'
+#' @description  This is adapted from: \url{http://stackoverflow.com/questions/22278951/combining-violin-plot-with-box-plot}
+#'
+#' @seealso vioQtile
+#'
+fill_viol<-function(gr.df,gr,qtile,probs){
+
+  ifelse(is.null(qtile),{
+    cuts <- cut(gr.df$y, breaks = quantile(gr.df$y, probs, na.rm=T, type=3, include.lowest = T, right = T), na.rm=T)},{
+      cuts <- cut(gr.df$y, breaks = qtile, na.rm=T)
+    }
+  )
+
+  quants <- dplyr::mutate(gr.df,
+                          x.l=x-violinwidth/2,
+                          x.r=x+violinwidth/2,
+                          cuts=cuts)
+
+  plotquants <- data.frame(x=c(quants$x.l,rev(quants$x.r)),
+                           y=c(quants$y,rev(quants$y)),
+                           id=c(quants$cuts,rev(quants$cuts)))
+
+  #cut by quantile to create polygon id
+  geom <- geom_polygon(aes(x=x,y=y,fill=factor(id)),data=plotquants,alpha=1)
+
+  return(list(quants=quants,plotquants=plotquants,geom=geom))
+}
+
+#' vioQtile
+#'
+#' @param gg     A ggplot.
+#' @param qtiles    Quantiles.
+#' @param probs     Probabilities.
+#' @param labels    Labels.
+#' @param withData    Return Data.
+#'
+#' @details
+#'  This is adapted from: \url{http://stackoverflow.com/questions/22278951/combining-violin-plot-with-box-plot}
+#'
+#'  \strong{Changed:}
+#'  Deal with 'empty' quantile groups
+#'  Deal with original data
+#'  More input, more output
+#'
+#' @export
+#'
+vioQtile <- function(gg=NULL,qtiles=NULL,probs=seq(0,1,.25),labels=paste(probs[-1]*100),withData=FALSE){
+  #  require(ggplot2)
+
+  g.df <- ggplot2::ggplot_build(gg)$data[[1]]    # use ggbuild to get the outline co-ords
+
+  ifelse(is.null(qtiles),{
+    gg <- gg + lapply(unique(g.df$group), function(x) fill_viol(g.df[g.df$group==x, ],x,NULL,probs)$geom)},{
+      gg <- gg + lapply(unique(g.df$group), function(x) fill_viol(g.df[g.df$group==x, ],x,qtiles[x, ],probs)$geom)}
+  )
+
+  gg <- gg + ggplot2::geom_hline(aes(yintercept=0)) +
+    ggplot2::scale_fill_grey(name="Quantile\n",labels=labels,guide=guide_legend(reverse=T,label.position="right")) +
+    ggplot2::stat_summary(fun.y=median, geom="point", size=8, color="grey80",shape=21,fill="white")
+
+  if(withData){
+    ifelse(is.null(qtiles),{
+      ggData <- lapply(unique(g.df$group), function(x) fill_viol(g.df[g.df$group==x,],x,NULL,probs))},{
+        ggData <- lapply(unique(g.df$group), function(x) fill_viol(g.df[g.df$group==x,],x,qtiles[x,],probs))
+      }
+    )
+    return(list(ggGraph=gg,ggData=ggData))
+  } else {
+    return(gg)
+  }
+}
+
+
+swarmPlot <- function(df, anonymous=FALSE, addSize=FALSE, addMedian=TRUE, addGlobalES = TRUE, addOriES=TRUE, addLabel=FALSE, oriES=NULL, fillvar=c("USA","sigf")[1]){
+
+  #sourceInfo <- get.GoogleSheet(url="https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/export?format=csv")$df
+
+  # if(is.null(oriES)&addOriES){
+  #  oriES <- import("/Users/Fred/Dropbox/Manylabs2/TestOutput/ORI.EFFECTS/ML2_ori_effects_MasterKey.xlsx")
+  # }
+
+  if(!is.null(oriES)){addOriES=FALSE}
+  if(addOriES){
+    # Load Key Table
+    oriES   <- get.GoogleSheet(data='ML2masteRkey')$df
+    ID.ori  <- which(nchar(oriES$orig.ES.r)>0)
+    ID.add  <- which(oriES$study.figure2.include==1)
+    Analyses.ori <- sort(oriES$study.analysis[ID.ori])
+    Analyses.add <- sort(oriES$study.analysis[ID.add])
+    # dft<- data.frame(includeFig2=Analyses.add)
+    # dft$oriEffect <-NA
+    # dft$oriEffect[Analyses.add%in%Analyses.ori] <- Analyses.ori[Analyses.ori%in%Analyses.add]
+    # rest<-Analyses.ori[!(Analyses.ori%in%Analyses.add)]
+    # dft[(nrow(dft)+1):(nrow(dft)+length(rest)),1:2] <- cbind(rep(NA,length(rest)),rest)
+  }
+
+
+  df$slabel <- df$study.id
+
+  # if(!anonymous){
+  #     l_ply(seq_along(oriES$study.analysis), function(l) df$slabel[tolower(as.character(df$.id))==oriES$study.analysis[l]] <<- oriES$description[l])
+  #     df$slabel <- factor(df$slabel)
+  # } else {
+  #     l_ply(seq_along(oriES$study.analysis), function(l) df$slabel[tolower(as.character(df$.id))==oriES$study.analysis[l]] <<- l)
+  #     df$slabel <- factor(df$slabel)
+  # }
+
+  df$.id    <- factor(df$.id)
+  btype     <- "swarm"
+  pdf(tempfile())
+  bs    <- beeswarm(ESCI.r ~ slabel, data = df,
+                    horizontal = FALSE, corral = "none",
+                    corralWidth = 5,
+                    pch = 21, spacing = 2, cex = .5,
+                    priority = "ascending", method = btype, do.plot = TRUE)[, c(1, 2, 4, 6)]
+  dev.off()
+
+  colnames(bs)[4] <- "labels"
+
+  df <- data.frame(df,bs)
+  se <- function(x){sqrt(var(x,na.rm=TRUE)/length(na.omit(x)))}
+
+  df$meanES <- plyr::ldply(unique(df$labels),
+                           function(r) cbind(rep(mean(df$y[df$labels==r], na.rm = TRUE),
+                                                 sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
+  df$seES <- plyr::ldply(unique(df$labels),
+                         function(r) cbind(rep(se(df$y[df$labels==r]),
+                                               sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
+
+  df <- arrange(df, meanES)
+
+  df$xx <- plyr::ldply(unique(df$labels),
+                       function(r) cbind(scale(df$x[df$labels==r], scale = F)))[,1]
+  df$xf <- plyr::ldply(seq_along(unique(df$labels)),
+                       function(r) cbind(df$xx[df$labels==unique(df$labels)[r]] +
+                                           seq(10,10*length(unique(df$labels)), by=10)[r]))[,1]
+  df$xn <- plyr::ldply(seq_along(unique(df$labels)),
+                       function(r) cbind(rep(seq(10,10*length(unique(df$labels)),by=10)[r],
+                                             sum(df$labels==unique(df$labels)[r]))))[,1]
+
+  keylabs <- c("Mean of sample ES","ES of grand mean","Original ES")[c(addMedian,addGlobalES,addOriES)]
+  mrkrs  <- c(22,21,23)[c(addMedian,addGlobalES,addOriES)]
+
+  mxN       <- max(df$ESCI.N.total)
+
+  #Colorblindsafe colors
+  cwhite = "#f7f7f7"
+  ccream = "#2166ac"
+  cblank = "#d1e5f0"
+  corange = "#f4a582"
+  cblue  = "#2166ac"
+  cred   = "#b2182b"
+  cpurp  = "#b2abd2"
+
+  mypalette <- c(cred,cblue)
+
+  df$sigf <- NA
+  df$sigf[df$test.p.value> .05] <- "Not Significant"
+  df$sigf[df$test.p.value<=.05] <- "Significant"
+  df$sigf <- factor(df$sigf)
+
+  # df$Country <- "No Country"
+  # l_ply(seq_along(df$.id), function(l) df$Country[l] <<- sourceInfo$Country[sourceInfo$Source.Global==df$study.source[l]])
+
+  df$USA                    <- "Non-USA"
+  df$USA[df$source.Country=="USA"] <- "USA"
+
+  df$USA <- factor(df$USA)
+
+  df <- df[df$ESCI.N.total>=30,]
+
+  dfG <- dplyr::summarise(group_by(df,.id),
+                          y= mean(ESCI.r,na.rm = T),
+                          ymin=mean(ESCI.l.r, na.rm = T),
+                          ymax=mean(ESCI.u.r, na.rm = T))
+
+  dfG   <- arrange(dfG, y)
+  dfG$x <- seq(10,10*nrow(dfG),by=10)
+
+  dfGlobal <- dplyr::summarise(group_by(df,.id),
+                               y= max(GlobalES,na.rm = TRUE),
+                               ymin=max(GlobalESlo, na.rm = TRUE),
+                               ymax=max(GlobalEShi, na.rm = TRUE))
+  dfGlobal   <- arrange(dfGlobal, y)
+  dfGlobal$x <- seq(10,10*nrow(dfGlobal),by=10)
+
+  if(addOriES){
+    oriES      <- oriES[ID.ori,]
+    oriES$mES <- plyr::laply(na.exclude(oriES$study.analysis), function(s) dfG$y[tolower(dfG$.id)%in%tolower(s)])
+    oriES     <- dplyr::arrange(oriES, mES)
+    oriES$x   <- seq(10,10*nrow(oriES),by=10)
+  }
+  df$fillvar<- df[,fillvar]
+
+  g <-ggplot(df, aes(x=xf, y=y)) +
+    geom_vline(xintercept = unique(df$xn), colour = "grey80",alpha = 1) +
+    geom_hline(yintercept = 0, colour = "ivory4")
+
+  if(addSize){
+    g <-  g +
+      geom_point(aes(fill = fillvar, size = ESCI.N), col=cwhite, pch=21)
+    # scale_size_continuous("Sample Size", breaks = c(0.01, 0.1, 0.3, 0.5,0.8,1),
+    #                       labels = round(c(0.01, 0.1, 0.3, 0.5,0.8, 1) * mxN),
+    #                       guide = guide_legend(override.aes=list(colour="grey30",fill="grey70"), byrow = TRUE)
+    # )
+  } else {
+    g <-  g +
+      geom_point(aes(fill = fillvar), size = 2, col=cwhite, pch=21)
+  }
+
+  if(addMedian){
+    g <- g + geom_point(data=dfG,aes(x=x,y=y),
+                        color="black",fill=cpurp,alpha=1,size=3,pch=22)
+  }
+
+  if(addGlobalES){
+    g <- g + geom_point(data=dfGlobal,aes(x=x,y=y),
+                        color="black",fill=cblank,alpha=1,size=3,pch=21)
+  }
+
+  if(addOriES){
+    g <- g +
+      geom_point(data=oriES,aes(x=x,y=ESCI.r),
+                 color="black",fill=corange,alpha=1,size=3,pch=23)
+  }
+
+  if(addLabel){
+    g <- g +
+      geom_text(aes(label=study.source,hjust=0,color=fillvar),
+                size= 1,
+                angle = 45,
+                position=position_dodge(.9))
+  }
+
+  g <- g +
+    scale_y_continuous("Effect Size r", limits = c(-1,1)) +
+    scale_x_continuous("", breaks = unique(df$xn),
+                       labels = unique(paste(df$labels)),
+                       expand = c(0, 10)) +
+    scale_fill_manual("Sample",values = mypalette,  guide   = guide_legend(override.aes = list(size = 4), byrow = TRUE)) +
+    gg.theme() + coord_flip()  +
+    theme(legend.position = "top", legend.background=element_rect())
+
+  return(g)
+
+}
+
+#' get.plotly
+#'
+#' Get a plotly plot.
+#'
+#' @param data Dataframe with ML2 testresutls and ESCI output.
+#' @param analysis_url url
+#'
+#' @export
+#'
+get.plotly <- function(data,analysis_url){
+
+  p <- plot_ly(data,
+               x    = ESCI.r,
+               y    = test.p.value,
+               mode = "markers",
+               hoverinfo = "text",
+               size = ESCI.N.total,
+               text = paste("<b>r</b> =",ESCI.r,"<b>p</b> <",signif(test.p.value,digits = 4),"<br>",
+                            #"<i>Analysis:</i><a href=",analysis_url,">",.id,"</a><br>",
+                            "<i>Sample:</i>",study.source),
+               name = analysis_url) %>%
+    add_trace(x=seq(-1,1),y=rep(0.05,3),  line = list(color="green"), name="p<.05") %>%
+    add_trace(x=seq(-1,1),y=rep(0.000001,3), line = list(color="orange"), name="p<.000001") %>%
+    add_trace(x=seq(-1,1),y=rep(0.000000000001,3), line = list(color="red"), name="p<.000000000001") %>%
+    layout(yaxis = list(title = "p-value"),
+           xaxis = list(title = "Effect Size r"))
+  l <- plotly_build(p)
+  l$data[[1]]$text <- gsub("<br>ESCI.N.total (size):"," - <b>N</b> = ",l$data[[1]]$text,fixed=T)
+  l$data[[1]]$marker$size <- l$data[[1]]$marker$size/10
+  return(plotly_build(l))
+}
+
+
+
+#' renderHTMLresults
+#'
+#' @param pageID
+#'
+renderHTMLresults <- function(pageID) {
+  rmarkdown::render(input  = "ML2_interactive_results.Rmd",
+                    params = list(
+                      set_title = paste("ManyLabs2 -",pageID),
+                      pageID    = pageID,
+                      fName     = paste0(paste("ML2",pageID,sep='_'),".html")),
+                    output_format = "html_document",
+                    output_file   = paste0(paste("ML2",pageID,sep='_'),".html"),
+                    output_dir    = "interActive/"
+  )
+}
+
+
+
+OutputTemplate <- function(){
+return(
+data.frame(
+ results.generated = now(),
+ study.id = NA,
+ study.name = NA,
+ study.slate = NA,
+ study.mean = NA,
+ study.source = NA,
+ analysis.type = NA,
+ analysis.name = NA,
+ stat.N = NA,
+ stat.n1 = NA,
+ stat.n2 = NA,
+ stat.cond1.name = NA,
+ stat.cond1.column = NA,
+ stat.cond1.n = NA,
+ stat.cond1.count = NA,
+ stat.cond1.prop.cond = NA,
+ stat.cond1.prop.tot = NA,
+ stat.cond1.value = NA,
+ stat.cond1.mean = NA,
+ stat.cond1.sd = NA,
+ stat.cond1.median = NA,
+ stat.cond1.trimmed = NA,
+ stat.cond1.mad = NA,
+ stat.cond1.min = NA,
+ stat.cond1.max = NA,
+ stat.cond1.range = NA,
+ stat.cond1.skew = NA,
+ stat.cond1.kurtosis = NA,
+ stat.cond1.se = NA,
+ stat.cond2.name = NA,
+ stat.cond2.column = NA,
+ stat.cond2.n = NA,
+ stat.cond2.count = NA,
+ stat.cond2.prop.cond = NA,
+ stat.cond2.prop.tot = NA,
+ stat.cond2.value = NA,
+ stat.cond2.mean = NA,
+ stat.cond2.sd = NA,
+ stat.cond2.median = NA,
+ stat.cond2.trimmed = NA,
+ stat.cond2.mad = NA,
+ stat.cond2.min = NA,
+ stat.cond2.max = NA,
+ stat.cond2.range = NA,
+ stat.cond2.skew = NA,
+ stat.cond2.kurtosis = NA,
+ stat.cond2.se = NA,
+ stat.cond3.name = NA,
+ stat.cond3.column = NA,
+ stat.cond3.n = NA,
+ stat.cond3.count = NA,
+ stat.cond3.n = NA,
+ stat.cond3.prop.cond = NA,
+ stat.cond3.prop.tot = NA,
+ stat.cond3.value = NA,
+ stat.cond3.mean = NA,
+ stat.cond3.sd = NA,
+ stat.cond3.median = NA,
+ stat.cond3.trimmed = NA,
+ stat.cond3.mad = NA,
+ stat.cond3.min = NA,
+ stat.cond3.max = NA,
+ stat.cond3.range = NA,
+ stat.cond3.skew = NA,
+ stat.cond3.kurtosis = NA,
+ stat.cond3.se = NA,
+ stat.cond4.name = NA,
+ stat.cond4.column = NA,
+ stat.cond4.n = NA,
+ stat.cond4.count = NA,
+ stat.cond4.n = NA,
+ stat.cond4.prop.cond = NA,
+ stat.cond4.prop.tot = NA,
+ stat.cond4.value = NA,
+ stat.cond4.mean = NA,
+ stat.cond4.sd = NA,
+ stat.cond4.median = NA,
+ stat.cond4.trimmed = NA,
+ stat.cond4.mad = NA,
+ stat.cond4.min = NA,
+ stat.cond4.max = NA,
+ stat.cond4.range = NA,
+ stat.cond4.skew = NA,
+ stat.cond4.kurtosis = NA,
+ stat.cond4.se = NA,
+ test.type = NA,
+ test.estimate = NA,
+ test.estimate1 = NA,
+ test.estimate2 = NA,
+ test.statistic = NA,
+ test.p.value = NA,
+ test.parameter = NA,
+ test.conf.low = NA,
+ test.conf.high = NA,
+ test.method = NA,
+ test.alternative = NA,
+ test.estype = NA,
+ test.varequal = NA,
+ test.ConsoleOutput = NA,
+ test.ncp = NA,
+ test.ncp.lo = NA,
+ test.ncp.hi = NA,
+ test.table = NA,
+ test.parameter1 = NA,
+ test.parameter2 = NA,
+ # test.cohensQ = NA,
+ # test.cohensQ.l = NA,
+ # test.cohensQ.u = NA,
+ # test.bootR1 = NA,
+ # test.bootR2 = NA,
+ # test.bootCI.l = NA,
+ # test.bootCI.u = NA,
+ # test.fZ.r = NA,
+ # test.fZ.l.r = NA,
+ # test.fZ.u.r = NA,
+ ESCI.estimate = NA,
+ ESCI.statistic = NA,
+ ESCI.p.value = NA,
+ ESCI.parameter = NA,
+ ESCI.conf.low = NA,
+ ESCI.conf.high = NA,
+ ESCI.method = NA,
+ ESCI.alternative = NA,
+ ESCI.estype = NA,
+ ESCI.ncp = NA,
+ ESCI.ncp.lo = NA,
+ ESCI.ncp.hi = NA,
+ ESCI.N.total = NA,
+ ESCI.n.1 = NA,
+ ESCI.n.2 = NA,
+ ESCI.d = NA,
+ ESCI.var.d = NA,
+ ESCI.l.d = NA,
+ ESCI.u.d = NA,
+ ESCI.U3.d = NA,
+ ESCI.cl.d = NA,
+ ESCI.cliffs.d = NA,
+ ESCI.pval.d = NA,
+ ESCI.g = NA,
+ ESCI.var.g = NA,
+ ESCI.l.g = NA,
+ ESCI.u.g = NA,
+ ESCI.U3.g = NA,
+ ESCI.cl.g = NA,
+ ESCI.pval.g = NA,
+ ESCI.r = NA,
+ ESCI.var.r = NA,
+ ESCI.l.r = NA,
+ ESCI.u.r = NA,
+ ESCI.pval.r = NA,
+ ESCI.fisher.z = NA,
+ ESCI.var.z = NA,
+ ESCI.l.z = NA,
+ ESCI.u.z = NA,
+ ESCI.OR = NA,
+ ESCI.l.or = NA,
+ ESCI.u.or = NA,
+ ESCI.pval.or = NA,
+ ESCI.lOR = NA,
+ ESCI.l.lor = NA,
+ ESCI.u.lor = NA,
+ ESCI.pval.lor = NA,
+ ESCI.cohensQ = NA,
+ ESCI.cohensQ.l = NA,
+ ESCI.cohensQ.u = NA,
+ ESCI.bootR1 = NA,
+ ESCI.bootR2 = NA,
+ ESCI.bootCI.l = NA,
+ ESCI.bootCI.u = NA,
+ source.Source = NA,
+ source.Source.Global = NA,
+ source.Location = NA,
+ source.ReplicationPI = NA,
+ source.Filename = NA,
+ source.StudyOrder = NA,
+ source.IDiffOrder = NA,
+ source.Country = NA,
+ source.Language = NA,
+ source.Weird = NA,
+ source.SubjectPool = NA,
+ source.Setting = NA,
+ source.Tablet = NA,
+ source.Pencil = NA,
+ source.Execution = NA,
+ source.Slate = NA,
+ source.source = NA,
+ source.N.sources.global = NA,
+ source.N.sources.primary = NA,
+ source.N.sources.secondary = NA,
+ source.N.countries = NA,
+ source.N.locations = NA,
+ source.N.languages = NA,
+ source.N.studyorders1 = NA,
+ source.N.studyorders2 = NA,
+ source.N.IDiffOrderN = NA,
+ source.N.uIDs = NA,
+ source.N.cases.included = NA,
+ source.N.cases.excluded = NA,
+ source.Pct.WEIRD = NA,
+ source.Tbl.Execution = NA,
+ source.Tbl.subjectpool = NA,
+ source.Tbl.setting = NA,
+ source.Tbl.Tablet = NA,
+ source.Tbl.Pencil = NA,
+ source.Tbl.analysistype = NA,
+ source.Tbl.subset = NA,
+ stat.cond5.name = NA,
+ stat.cond5.column = NA,
+ stat.cond5.n = NA,
+ stat.cond5.mean = NA,
+ stat.cond5.sd = NA,
+ stat.cond5.median = NA,
+ stat.cond5.trimmed = NA,
+ stat.cond5.mad = NA,
+ stat.cond5.min = NA,
+ stat.cond5.max = NA,
+ stat.cond5.range = NA,
+ stat.cond5.skew = NA,
+ stat.cond5.kurtosis = NA,
+ stat.cond5.se = NA,
+ stat.cond6.name = NA,
+ stat.cond6.column = NA,
+ stat.cond6.n = NA,
+ stat.cond6.mean = NA,
+ stat.cond6.sd = NA,
+ stat.cond6.median = NA,
+ stat.cond6.trimmed = NA,
+ stat.cond6.mad = NA,
+ stat.cond6.min = NA,
+ stat.cond6.max = NA,
+ stat.cond6.range = NA,
+ stat.cond6.skew = NA,
+ stat.cond6.kurtosis = NA,
+ stat.cond6.se = NA)
+)
+ }
+
+# Rmd2htmlWP <- function(infile, outfile, sup = T) {
+#   require(markdown)
+#   require(knitr)
+#   mdOpt <- markdownHTMLOptions(default = T)
+#   mdOpt <- mdOpt[mdOpt != "mathjax"]
+#   mdExt <- markdownExtensions()
+#   mdExt <- mdExt[mdExt != "latex_math"]
+#   if (sup == T) {
+#     mdExt <- mdExt[mdExt != "superscript"]
+#   }
+#   knit2html(input = infile, output = outfile, options = c(mdOpt), extensions = c(mdExt))
+# }
+
+#
+# [copied from http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/ ]
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multi.PLOT <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+  if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid::grid.newpage()
+    grid::pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+# ANALYSIS functions ----------------
+
+
+#' any2any
+#'
+#' Converts most common test statistics into most common (signed) effect sizes.
+#'
+#' @param st     Value(s) of a test statistic.
+#' @param df1     Degrees of freedom
+#' @param df2     NULL or degrees of freedom of the denominator for the f-distribution.
+#' @param N     Number of data points used in calculation of test-statistic.
+#' @param n1    Number of data points in sample 1.
+#' @param n2    Number of data points in sample 2.
+#' @param esType     Type of test statistic. One of: "t", "lm.t", "f", "lm.f", "r", "X2", "Z", "lm.Z"
+#' @param CIcalc     If \code{TRUE} (default) the Confidence Interval for the test statistic in \code{x} will be calculated using the "Confidence limits for noncentral parameters" functions in package (e.g., for type - "t": \link[MBESS]{conf.limits.nct}).
+#' @param CL    Confidence Limit (default: .95).
+#' @param rID    Correlation among predictor values in a linear model.
+#' @param q      Number of predictors in the model.
+#' @param alternative     Alternative hypothesis (defult = "two").
+#' @param keepSign     Return effect size with sign of test statistic? (default = TRUE).
+#' @param keepSignNames     Which effect sizes should keep the sign if \code{keepSign = TRUE}? Default is to keep the sign for: "r","l.r","u.r","fisher.z","l.z","u.z".
+#'
+#' @details The procedure to calculate a variety of effect sizes is as follows:
+#'
+#' \itemize{
+#' \item If \code{CIcalc == FALSE}, \code{package::compute.es} will be used to convert the test statistic to a large number of effect size estimates. The confidence intervals around the effect size estimates will be based meta-analytic estimates of effect size variance (e.g., for type - "t": \link[compute.es]{tes}).
+#' \item If \code{CIcalc == TRUE}, \code{package::MBESS} will be used to calculate the confidence interval for the test statistic based on its noncentral distribution (e.g., for type - "t": \link[MBESS]{conf.limits.nct}). Subsequently the test statistic, as well as its lower and upper confidence limit will each be passed to \code{compute.es} seperately.
+#' \item If \code{keepSign == TRUE} the sign of the test statistic will be copied to all the effect sizes in \code{keepSignNames}.
+#' }
+#'
+#' @note The prefix "lm" is currently disregarded, but will be implemented in future versions to indicate the test statistic is in fact a fixed factor in a linear model.
+#'
+#' @author
+#' Fred Hasselman (inspired by RP:P function \code{any2r} by CHJ Hartgerink)
+#'
+#' @export
+#'
+#' @return The effect sizes calculated by \code{compute.es} corresponding to the test statistic(s), with either meta-analytic, or, exact CI.
+#'
+any2any <- function(testInfo,
+                    df1 = NULL,
+                    df2 = NULL,
+                    N   = NULL, n1 = NULL, n2 = NULL,
+                    esType  = NA,
+                    var.lor = NA,
+                    CIcalc  = TRUE, CL = .95, rID = 0, q = 1,
+                    alternative   = "two", keepDirection = TRUE,
+                    keepSign      = TRUE,
+                    keepSignNames = c("r","l.r","u.r","fisher.z","l.z","u.z")){
+  # require(MBESS)
+  # require(compute.es)
+  esType.cl <- NA
+
+  ifelse(grepl("two",alternative),{alternative <<- "two"},{alternative <<- "one"})
+
+  #  ifelse(any(grepl("estimate",colnames(testInfo))), {st <- testInfo$estimate},{st <- testInfo$statistic})
+  if(any(grepl("(.r)+", esType),(esType%in%c("OR")))){
+    st <- testInfo$estimate
+  } else {
+    st <- testInfo$statistic
+  }
+
+  if(grepl("Z.f", esType, fixed = TRUE)){
+    if(length(testInfo$estimate)>1){
+      esType <- esType.cl <- "Z"
+      st <- testInfo$statistic
+    }
+  }
+
+
+  if(esType%in%"Z"){
+    if(alternative=="one"){
+      n1<-N/2
+      n2<-N/2
+      alternative<-"two"
+    }
+  }
+
+
+  if(is.null(st)){stop("No test statistic to caclulate ES-CI.")}
+
+  # Use Cohen's dz for paired t-test
+  if(esType%in%"t.p"){
+    n1 <- n2 <- N/2
+    st <- testInfo$statistic / sqrt(N)
+  }
+
+
+  # Check for model-based t-statistics
+  if(grepl("(lm.t)+",esType)){
+    # Make df of the predictor
+    n1 <- n2 <- (df1+1)/2
+  }
+
+
+  # Treat model based stats as 'regular'
+  esType.cl <- gsub("(lm.)","",esType)
+
+
+  # Settings for model-based OR
+  if(grepl("(lm.OR)+",esType)){
+    st        <- exp(st)
+    esType.cl <- "Asym"
+    CIcalc    <- FALSE
+  }
+
+  if(is.na(esType.cl)){esType.cl<-esType}
+
+  if(is.na(st)|is.null(st)|is.nan(st)){
+
+    ES <- compute.es::tes(t=2, level= 95, n.1 = 100, n.2 = 100, verbose = FALSE, dig = 5)
+    ES[seq_along(ES)] <- NA
+    ES <- c(st,st,st,ES)
+
+    CIcalc <- FALSE
+  }
+
+
+  if(CIcalc){
+
+    getCI <- TRUE
+
+    if(esType=="OR"){
+      # Fisher exact test gives exact noncentral hypergeometric CI
+      sCI <- cbind(ncp    = testInfo$estimate,
+                   ncp.lo = testInfo$conf.low,
+                   ncp.hi = testInfo$conf.high)
+      getCI <- FALSE
+    }
+
+    if(grepl("Z.f", esType, fixed = TRUE)){
+       if(testInfo$method=="Fisher r-to-Z transformed test for difference between 1 observed correlation and a hypothesized value."){
+      sCI <- cbind(ncp    = testInfo$estimate,
+                   ncp.lo = testInfo$conf.low,
+                   ncp.hi = testInfo$conf.high)
+      esType <- esType.cl <- "r"
+      getCI <- FALSE
+    } else {
+      getCI <- FALSE
+      esType <- esType.cl <- "Z"
+      sCI <- cbind(ncp  = st)
+    }
+    }
+
+    if(getCI){
+      sCI <- get.ncpCI(st, df1, df2, N, esType.cl, CL, keepSign, alternative)
+      if(esType=="f"){sCI[1,is.na(sCI)]<-1}
+      if(esType%in%c("t","t.p","t.r","Z")){sCI[1,is.na(sCI)]<-0}
+    }
+    # no CI
+  } else {
+    sCI <- cbind(ncp  = st)
+  }
+
+  esComp <- list()
+  cnt    <- 0
+
+  for(cnt in seq_along(sCI)){
+
+   # browser()
+
+    x <- sCI[cnt]
+    if(x==0|is.na(x)|is.nan(x)){
+      x <- rnorm(1)*1e-12
+      disp("ES converison: A test statistic of 0 (or NA, or NaN) was changed to rnorm(1) * 1e-12 in order to enable ES conversion.", header= FALSE, footer = FALSE)}
+
+    # This effectively ignores model based stats
+    esType <- gsub("lm.","",esType,fixed=TRUE)
+    #esType <- gsub("Z.f","r",esType,fixed=TRUE)
+
+    ncCI <- list()
+    switch(esType,
+           t.p  = esComp[[cnt]] <- compute.es::des(d   = x, n.1 = (N/2), n.2 = (N/2), level=CL*100, verbose = FALSE, dig = 5),
+           t    = esComp[[cnt]] <- compute.es::tes(t   = x, level=CL*100,
+                                                   n.1 = n1, n.2 = n2, verbose = FALSE, dig = 5),
+           lm.t = esComp[[cnt]] <- compute.es::a.tes(t=x, level=CL*100,
+                                                     n.1 = n1, n.2 = n2, R = rID, q = q,
+                                                     verbose = FALSE, dig = 5),
+           t.r  = esComp[[cnt]] <- compute.es::res(r = x, level=CL*100, var.r = ((1-x^2)^2)/(N-1),
+                                                   n = N, verbose = FALSE, dig = 5),
+           r  = esComp[[cnt]] <- compute.es::res(r = x, level=CL*100, var.r = NULL,
+                                                  n = N, verbose = FALSE, dig = 5),
+           #compute.es::res(r=x, level=CL, n=N, verbose = FALSE, dig = 5),
+           f    = esComp[[cnt]] <- compute.es::fes(f=x, level=CL*100,
+                                                   n.1 = n1, n.2 = n2, verbose = FALSE, dig = 5),
+           lm.f = esComp[[cnt]] <- compute.es::a.fes(f=x, level=CL*100,
+                                                     n.1 = n1, n.2 = n2, R = rID, q = q,
+                                                     verbose = FALSE, dig = 5),
+           X2   = esComp[[cnt]] <- compute.es::chies(chi.sq = x, level = CL*100,
+                                                     n = N, verbose = FALSE, dig = 5),
+           Z    = esComp[[cnt]] <- compute.es::pes(p = ifelse(pnorm(abs(x), lower.tail= FALSE)*2==0,.Machine$double.eps,pnorm(abs(x), lower.tail= FALSE)*2), level = CL*100, n.1 = n1, n.2 = n2, tail = "two", verbose = FALSE, dig = 5),
+           lm.Z  = esComp[[cnt]] <- compute.es::a.pes(p = pnorm(abs(x), lower.tail= FALSE)*2, level = CL*100, n.1 = n1, n.2 = n2, R = rID, q = q, tail = alternative, verbose = FALSE, dig = 5),
+           OR    = esComp[[cnt]] <- compute.es::lores(lor=log(x), n.1 = n1, n.2 = n2, var.lor = var.lor, verbose = FALSE, dig = 5, level = CL*100)
+    )
+  }
+
+  # This section re-calculates CI based on the exact CI for the test statistic obtained from MBESS in function get.ncpCI
+  if(cnt>1){
+
+    if(esType%in%c("r","t.r")){
+
+      ncp <- compute.es::tes(t=2, level= 95, n.1 = 100, n.2 = 100, verbose = FALSE, dig = 5)
+      ncp[seq_along(ncp)] <- NA
+      id.l <- c("l.d","l.r", "l.z", "l.or", "l.lor")
+      id.u <- c("u.d","u.r", "u.z", "u.or", "u.lor")
+      id.e <- c("d", "r", "fisher.z", "OR", "lOR")
+      rNames <- names(compute.es::res(r=1,var.r=.5, n=100, level=95,dig=5,verbose = FALSE))
+      ncp[,rNames] <- esComp[[1]][,rNames]
+      ncp$N.total <- N
+      ncp$n.1 <- n1
+      ncp$n.2 <- n2
+
+      if(esType=="t.r"){
+        sCI <- get.ncpCI(testInfo$statistic, df1, df2, N, "t", CL, keepSign)
+      }
+    } else {
+
+      ncp  <- esComp[[1]]
+      id.l <- c("l.d", "l.g", "l.r", "l.z", "l.or", "l.lor")
+      id.u <- c("u.d", "u.g", "u.r", "u.z", "u.or", "u.lor")
+      id.e <- c("d", "g", "r", "fisher.z", "OR", "lOR")
+    }
+
+    ncp[,id.l] <- esComp[[2]][,id.e]
+    ncp[,id.u] <- esComp[[3]][,id.e]
+
+    ES <- cbind(sCI, ncp[,colnames(ncp)!="NNT"])
+
+  } else {
+
+    if(esType.cl%in%"Asym"){
+      sCI <- cbind(ncp    = esComp[[1]]$lOR,
+                   ncp.lo = esComp[[1]]$l.lor,
+                   ncp.hi = esComp[[1]]$u.lor)
+    }
+    ncp  <- esComp[[1]]
+    ES   <- cbind(sCI, ncp[,colnames(ncp)!="NNT"])
+
+  }
+
+  colnames(ES)[1:cnt] <- c("ncp","ncp.lo","ncp.hi")[1:cnt]
+
+  # compute.es keeps the sign for d and related ES, but not for r if tes and des are used,.
+  # If keepSign = TRUE the sign from d will be copied to r and related es.
+
+  # unique(ML2.key$stat.type)
+  #  "t"    "t.r"  "OR"   "lm.t" "Z"    "f"    "lm.Z"
+  if(cnt>1){
+  if(!all((sign(ES$ncp)==sign(ES[ ,c("d","r")])),(sign(ES$ncp.lo)==sign(ES[ ,c("l.d","l.r")])),(sign(ES$ncp.hi)==sign(ES[ ,c("u.d","u.r")])), na.rm = TRUE) & !esType%in%c("OR","t.r","r")){
+    if(keepSign){
+      if(esType%in%c("X2","f")){
+        id.l <- which(colnames(ES) %in% c("l.d", "l.g", "l.r", "l.z"))
+        id.u <- which(colnames(ES) %in% c("u.d", "u.g", "u.r", "u.z"))
+        id.e <- which(colnames(ES) %in% c("d", "cliffs.d", "g", "r", "fisher.z"))
+        col.id <- c(id.e,id.l,id.u)
+      }
+      if(any(esType%in%c("lm.Z","Z"))){ # esType=="Z"|esType=="lm.Z"
+        col.id <-which(colnames(ES)%in%c("d","l.d","u.d",keepSignNames))
+      }
+      if(esType%in%c("t","lm.t")){
+        col.id <-which(colnames(ES)%in%keepSignNames)
+      }
+      col.id <- sort(col.id)
+      ES[ ,col.id] <- ES[ ,col.id] * sign(sCI)[1:cnt]
+    }
+  }
+}
+  return(ES)
+}
+
+
+#' get.ncpCI
+#'
+#' @param x  A noncentrality parameter.
+#' @param df1  Degrees of freeddom.
+#' @param df2  NULL or degrees of freedom of the denominator for the f-distribution.
+#' @param N  Sample size
+#' @param esType     Type of test statistic. One of: "t", "t.r", lm.t", "f", "lm.f", "r", "X2", "Z", "lm.Z"
+#' @param CL    Confidence Limit (default: .95).
+#' @param keepSign     Return effect size with sign of test statistic? (default = TRUE).
+#' @param keepDirection  Use the information in \code{alternative} to decide on one-sided vs. two-sided confidence intervals. Default is \code{TRUE}. If \code{FALSE}, two-sided CIs will be calclulated irrespective of the direction of the \code{alternative}.
+#' @param alternative    Alternative hypothesis (defult = "two").
+#'
+#'
+
+#' @export
+#'
+
+get.ncpCI <- function(x, df1, df2, N, esType, CL=.95, keepSign = TRUE, keepDirection = TRUE, alternative = "two.sided"){
+  #require(MBESS)
+  esType <- gsub("lm.","",esType)
+  ncCI   <- list()
+
+  Talpha  <- 1-CL
+  if(grepl("two",alternative)|keepDirection==FALSE){
+    CLimsZ  <- c(Talpha/2, CL + (Talpha/2))
+    CLims   <- c(NULL,NULL)
+    Tsides <- 2
+  }
+  if(!grepl("two",alternative)&keepDirection==TRUE){
+    ifelse(alternative == "greater",
+           CLims <- c(-Inf,  1-Talpha),
+           CLims <- c(Talpha, +Inf))
+    CLimsZ <- CLims
+    Tsides <- 1
+    CL <- NULL
+  }
+
+
+
+  switch(esType,
+         t.p = ncCI <- list(Lower.Limit = MBESS::ci.sm(sm = x, alpha.lower = CLims[1], alpha.upper = CLims[2],
+                                                       conf.level=CL,N=N)$Lower.Conf.Limit.Standardized.Mean,
+                            Upper.Limit = MBESS::ci.sm(sm = x, alpha.lower = CLims[1], alpha.upper = CLims[2],
+                                                       conf.level=CL,N=N)$Upper.Conf.Limit.Standardized.Mean),
+         t   = ncCI <- MBESS::conf.limits.nct(t.value=x, alpha.lower = CLims[1], alpha.upper = CLims[2], conf.level=CL,
+                                              df=df1),
+         f   = ncCI <- MBESS::conf.limits.ncf(F.value=x, alpha.lower = CLims[1], alpha.upper = CLims[2], conf.level=CL,
+                                              df.1=df1, df.2=df2),
+         #t.r = ncCI <- MBESS::conf.limits.nct(t.value=x, conf.level=CL, df=df1),
+         t.r = ncCI <- list(Lower.Limit = MBESS::ci.R(R=abs(x), alpha.lower = CLims[1], alpha.upper = CLims[2], conf.level=CL,
+                                                      N=N, K=1)$Lower.Conf.Limit.R,
+                            Upper.Limit = MBESS::ci.R(R=abs(x), alpha.lower = CLims[1], alpha.upper = CLims[2], conf.level=CL,
+                                                      N=N, K=1)$Upper.Conf.Limit.R),
+         X2  = ncCI <- MBESS::conf.limits.nc.chisq(Chi.Square=x, alpha.lower = CLims[1], alpha.upper = CLims[2], conf.level=CL,
+                                                   df=df1),
+         Z   = ncCI <- list(Lower.Limit = (x + qnorm(CLimsZ[2], lower.tail = FALSE)),
+                            Upper.Limit = (x + qnorm(CLimsZ[1], lower.tail = FALSE)))
+  )
+
+  #!all(sign(ES$ncp)==sign(ES[ ,c("d","r")]),na.rm = TRUE)&esType!="OR"
+  if((sign(x)==-1)&keepSign&grepl("t.r",esType)){
+    out <- cbind(ncp    = x,
+                 ncp.lo = sign(x) * ncCI$Upper.Limit,
+                 ncp.hi = sign(x) * ncCI$Lower.Limit)
+  } else {
+    out <- cbind(ncp    = x,
+                 ncp.lo = ncCI$Lower.Limit,
+                 ncp.hi = ncCI$Upper.Limit)
+  }
+  return(out)
+}
+
+
+
+#' Fisher Z test for correlations
+#'
+#' @param r1 First correlation
+#' @param r2 Second correlation
+#' @param n1 First sample size
+#' @param n2 Second sample size
+#' @param p Compute p-value? (default = TRUE)
+#' @param Cohens.q Compute effect size Cohen's q (default = TRUE)
+#' @param alpha Alpha evel for significance test
+#' @param alternative One of "greater", "less", "two.sided" (default)
+#'
+#' @return An `htest.fisherz` object
+#'
+#' @export
+#'
+cor_test_fisherZ <- function(r1 = NULL,
+                             r2 = NULL,
+                             n1 = NULL,
+                             n2 = NULL,
+                             p  = TRUE,
+                             Cohens.q    = TRUE,
+                             conf.level  = .95,
+                             alternative = "two.sided",
+                             null.value  = 0,
+                             cor.type = "pearson"){
+
+  effect.size    <- NULL
+  effect.size.ci <- NULL
+  interp <- ""
+
+  if(grepl("two.sided",alternative)){
+    sides <- 2
+  } else {
+    sides <- 1
+  }
+
+  alpha <- 1-conf.level
+
+  oneCor = FALSE
+  if(all(is.null(r2),is.null(n2))){
+    oneCor = TRUE
+  } else {
+    if(all(is.na(r2),is.na(n2))){
+      oneCor = TRUE
+    }
+  }
+
+  if(oneCor){
+    if((dim(as.matrix(r1))[2]==2)){
+      r1 <- stats::cor(r1[,1],r1[,2],use="pairwise.complete.obs", method = cor.type)
+    } else{
+      if(all((dim(as.matrix(r1))!=1))){
+        disp(message = "r1 needs to be:", header = "cor_test_fisherZ", footer = FALSE)
+        disp(message = "- Either a single numerical value representing a correlation,",
+             header = FALSE, footer = FALSE)
+        disp(message = "- Or a 2 column matrix from which a correlation r1 can be calculated",
+             header = FALSE)
+        stop
+      }
+    }
+
+    z <- atanh(r1)/sqrt(1/(n1-3))
+    conf.low   <- tanh(atanh(r1) - (qnorm(1-(alpha/sides)) * sqrt((1/(n1-3)))))
+    conf.high  <- tanh(atanh(r1) + (qnorm(1-(alpha/sides)) * sqrt((1/(n1-3)))))
+    if(p){p<-2*(1-pnorm(abs(z)))} else {p=NULL}
+    if(Cohens.q){
+      effect.size <- (atanh(r1)- 0)
+      names(effect.size) <- "Cohen's q (Zr1-Zρ0)"
+      conf.low.q   <- effect.size - (qnorm(1-(alpha/sides)) * sqrt((1/(n1-3))))
+      conf.high.q  <- effect.size + (qnorm(1-(alpha/sides)) * sqrt((1/(n1-3))))
+      effect.size.ci <- c(conf.low.q, conf.high.q)
+      names(effect.size.ci) <- paste(conf.level*100,"percent effect-size confidence interval:")
+      #<.1: no effect; .1 to .3: small effect; .3 to .5: intermediate effect; >.5: large effect.
+      interp <- ifelse(abs(effect.size)<.1,"No effect",
+                       ifelse(between(abs(effect.size),.1,.3),"Small effect",
+                              ifelse(between(abs(effect.size),.3,.5),"Intermediate effect","Large effect"
+                              )
+                       )
+      )
+      names(interp) <- "Interpretation of magnitude:"
+    }
+
+    names(z)         <- "Fisher.z"
+    estimate         <- r1
+    names(estimate)  <- c("cor")
+    parameter        <- n1
+    names(parameter) <- "n1"
+
+    method    <- "Fisher r-to-Z transformed test for difference between 1 observed correlation and a hypothesized value."
+    data.name <- paste("r1 (",cor.type,")")
+
+  } else {
+    if((dim(as.matrix(r1))[2]==2)&(dim(as.matrix(r2))[2]==2)){
+      r1 <- stats::cor(r1[,1],r1[,2], use = "pairwise.complete.obs", method = cor.type)
+      r2 <- stats::cor(r2[,1],r2[,2], use = "pairwise.complete.obs", method = cor.type)
+    } else{
+      if(all((dim(as.matrix(r1))!=1))&all(dim(as.matrix(r2))!=1)){
+        disp(message = "r1 and r2 each need to be:", header = "cor_test_fisherZ", footer = FALSE)
+        disp(message = "- Either a single numerical value representing a correlation,", header = FALSE, footer = FALSE)
+        disp(message = "- Or a 2 column matrix from which a correlation r1 and r2 can be calculated", header = FALSE)
+        stop
+      }
+    }
+
+    z  <- ((atanh(r1)-atanh(r2))/sqrt((1/(n1-3))+(1/(n2-3))))
+    fm <- qnorm(1-(alpha/sides)) * sqrt((1/(n1-3))+(1/(n2-3)))
+    # conf.low.r1   <- tanh(atanh(r1)-fm)
+    # conf.high.r1  <- tanh(atanh(r1)+fm)
+    # conf.low.r2   <- tanh(atanh(r2)-fm)
+    # conf.high.r2  <- tanh(atanh(r2)+fm)
+
+    conf.low   <- paste0("cor1 [",
+                         round(tanh(atanh(r1)-fm), digits = 3),",",
+                         round(tanh(atanh(r1)+fm), digits = 3),"]")
+    conf.high  <- paste0("cor2 [",
+                         round(tanh(atanh(r2)-fm), digits = 3),",",
+                         round(tanh(atanh(r2)+fm), digits = 3),"]")
+
+    if(p){p<-2*(1-pnorm(abs(z)))} else {p=NULL}
+    if(Cohens.q){
+      effect.size <- (atanh(r1) - atanh(r2))
+      names(effect.size) <- "Cohen's q (Zr1-Zr2-Zρ0)"
+      conf.low.q   <- effect.size - (qnorm(1-(alpha/sides)) * sqrt((1/(n1-3))+(1/(n2-3))))
+      conf.high.q  <- effect.size + (qnorm(1-(alpha/sides)) * sqrt((1/(n1-3))+(1/(n2-3))))
+      effect.size.ci <- c(conf.low.q, conf.high.q)
+      names(effect.size.ci) <- paste(conf.level*100,"percent effect-size confidence interval:")
+      #<.1: no effect; .1 to .3: small effect; .3 to .5: intermediate effect; >.5: large effect.
+      interp <- ifelse(abs(effect.size)<.1,"No effect",
+                       ifelse(between(abs(effect.size),.1,.3),"Small effect",
+                              ifelse(between(abs(effect.size),.3,.5),"Intermediate effect","Large effect"
+                              )
+                       )
+      )
+      names(interp) <- "Interpretation of magnitude:"
+    }
+
+    names(z) <- "Fisher.z"
+    estimate <- c(r1, r2)
+    names(estimate)<- c("cor1","cor2")
+    parameter <- c(n1,n2)
+    names(parameter) <- c("n1", "n2")
+    method <- "Fisher r-to-Z transformed test for difference between 2 independent correlations"
+    data.name <- paste("r1; r2 (",cor.type,")")
+  }
+
+  conf.int <- c(conf.low, conf.high)
+  attr(conf.int,"conf.level") <- conf.level
+
+  names(null.value) <- "correlation"
+
+  stat.test <- structure(list(statistic = z,
+                              parameter = parameter,
+                              p.value   = p,
+                              estimate  = estimate,
+                              null.value = null.value,
+                              alternative = alternative,
+                              method    = method,
+                              data.name = data.name,
+                              conf.int  = conf.int,
+                              effect.size = effect.size,
+                              effect.size.ci = effect.size.ci,
+                              effect.size.int = interp),
+                         class = c("htest.fisherZ"))
+  return(stat.test)
+}
+
+
+
+#' print fisherZ
+#'
+#' @param obj
+#'
+#' @return nothing
+#' @export
+#'
+print.htest.fisherZ <- function(obj){
+  class(obj) <- "htest"
+  print(obj)
+  cat(names(obj$effect.size), "\n")
+  cat(obj$effect.size, "\n")
+  cat(names(obj$effect.size.int))
+  cat(obj$effect.size.int, "\n")
+  cat(names(obj$effect.size.ci)[1], "\n")
+  cat(obj$effect.size.ci, "\n")
+}
+
+#' z.test
+#'
+#' An `htest` implentation of the z test for an observed mean or proportion.
+#'
+#' @param x Observed value
+#' @param mu Population mean under H_{0}
+#' @param pi Population proportion under H_{0}
+#' @param N Sample size
+#' @param sigma Population standard deviation
+#' @param proportion Observed proportion
+#' @param alternative
+#'
+#' @export
+#'
+z.test <- function(x = 0, mu = 0, pi = NULL, N = 0, sigma = 1, proportion=FALSE, alternative = "two.sided"){
+  #require(dplyr)
+  if(proportion){
+    if(!is.null(pi)){
+      if(all(dplyr::between(x,0,1),dplyr::between(pi,0,1))){
+        SE <- sqrt((pi * (1-pi))/N)
+        z <- (x-pi)/SE
+      } else {
+        stop("Argument x and/or pi not in [0,1]")
+      }
+    } else {
+      stop("Argument pi (expected population proportion) is NULL.")
+    }
+  } else {
+    SE <- sigma / sqrt(N)
+    z <- (x-mu)/SE
+  }
+
+  if(alternative=="two.sided"){
+    p <- 1-pnorm(abs(z))
+  } else {
+    p <- 2*(1-pnorm(abs(z)))
+  }
+  names(z) <- "Z"
+
+  if(proportion){
+    null.value <- pi
+    names(null.value) <- "π"
+  } else {
+    names(null.value) <- "mu"
+    null.value <- mu
+  }
+
+  if(proportion){
+    estimate <- x-pi
+    names(estimate) <- "(p-π)"
+  } else {
+    estimate <- x-mu
+    names(estimate) <- "(x-mu)"
+  }
+
+  statistic <- z
+  ifelse(proportion,
+         names(statistic) <- "(p-π)/sqrt(π*(1-π)/N)",
+         names(statistic) <- "(x-mu)/(sigma/sqrt(N))"
+  )
+  parameter <- N
+  names(parameter) <- "N"
+  stat.test <- structure(list(statistic = z,
+                              null.value = null.value,
+                              estimate = estimate,
+                              statistic = statistic,
+                              method="Z test",
+                              parameter=parameter,
+                              p.value=p),
+                         class = "htest")
+  return(stat.test)
+}
+
+
+# Wilcox functions for bootstrapped CI on difference between correlations
+# https://raw.githubusercontent.com/nicebread/WRS/master/pkg/R/Rallfun-v31.R
+
+twopcor<-function(x1,y1,x2,y2,SEED=TRUE){
+  #
+  #   Compute a .95 confidence interval for
+  #   the difference between two Pearson
+  #   correlations corresponding to two independent
+  #   goups.
+  #
+  #   This function uses an adjusted percentile bootstrap method that
+  #   gives good results when the error term is heteroscedastic.
+  #
+  #   WARNING: If the number of boostrap samples is altered, it is
+  #   unknown how to adjust the confidence interval when n1+n2 < 250.
+  #
+  nboot<-599  #Number of bootstrap samples
+  if(SEED)set.seed(2) # set seed of random number generator so that
+  #             results can be duplicated.
+  X<-elimna(cbind(x1,y1))
+  x1<-X[,1]
+  y1<-X[,2]
+  X<-elimna(cbind(x2,y2))
+  x2<-X[,1]
+  y2<-X[,2]
+  cat("\nTaking bootstrap samples; please wait\n")
+  data1<-matrix(sample(length(y1),size=length(y1)*nboot,replace=TRUE),nrow=nboot)
+  bvec1<-apply(data1,1,pcorbsub,x1,y1) # A 1 by nboot matrix.
+  data2<-matrix(sample(length(y2),size=length(y2)*nboot,replace=TRUE),nrow=nboot)
+  bvec2<-apply(data2,1,pcorbsub,x2,y2) # A 1 by nboot matrix.
+  bvec<-bvec1-bvec2
+  ilow<-15
+  ihi<-584
+  if(length(y1)+length(y2) < 250){
+    ilow<-14
+    ihi<-585
+  }
+  if(length(y1)+length(y2) < 180){
+    ilow<-11
+    ihi<-588
+  }
+  if(length(y1)+length(y2) < 80){
+    ilow<-8
+    ihi<-592
+  }
+  if(length(y1)+length(y2) < 40){
+    ilow<-7
+    ihi<-593
+  }
+  bsort<-sort(bvec)
+  r1<-stats::cor(x1,y1)
+  r2<-stats::cor(x2,y2)
+  ci<-c(bsort[ilow],bsort[ihi])
+  list(r1=r1,r2=r2,ci=ci)
+}
+
+elimna<-function(m){
+  #
+  # remove any rows of data having missing values
+  #
+  if(is.list(m)){
+    for(j in 1:length(m))m[[j]]=na.omit(m[[j]])
+    elimna=m
+  }
+  if(!is.list(m)){
+    if(is.null(dim(m)))m<-as.matrix(m)
+    ikeep<-c(1:nrow(m))
+    for(i in 1:nrow(m))if(sum(is.na(m[i,])>=1))ikeep[i]<-0
+    elimna<-m[ikeep[ikeep>=1],]
+  }
+  elimna
+}
+
+pcorbsub<-function(isub, x, y)
+{
+  #
+  #  Compute Pearson's correlation using x[isub] and y[isub]
+  #  isub is a vector of length n,
+  #  a bootstrap sample from the sequence of integers
+  #  1, 2, 3, ..., n
+  #
+  pcorbsub<-stats::cor(x[isub],y[isub])
+  pcorbsub
+}
+
+
+#' decide.Equalvar
+#'
+#' @param vars int
+#' @param labels int
+#' @param key int
+#' @param alpha int
+#' @param criterion int
+#' @param group int
+#' @param verbose  int
+#'
+#'
+#' @export
+#'
+decide.EqualVar <- function(vars, labels, key, alpha=.05, criterion = 2, group, verbose = FALSE){
+
+  vars$N  <- NULL
+  longDat <- NULL
+
+  if(length(vars)==2){
+
+    if(any(plyr::laply(vars,is.factor))){
+
+      longDat <- cbind.data.frame(vars)
+      colnames(longDat)[plyr::laply(vars,is.factor)]    <- "group"
+      colnames(longDat)[!(plyr::laply(vars,is.factor))] <- "xy"
+
+    } else {
+
+      if(all(lengths(vars)>1)){
+        longDat <- plyr::ldply(unlist(vars))
+        longDat <- data.frame(xy = longDat$V1, group = factor(c(rep(1, length(vars[[1]])),
+                                                                rep(2, length(vars[[2]])))))
+      }
+    }
+
+    if(!is.null(longDat)){
+
+      t1 <- var.test(xy ~ group, data = longDat)
+      t2 <- car::leveneTest(xy ~ group, data = longDat)
+      t3 <- bartlett.test(xy ~ group, data = longDat)
+      t4 <- fligner.test(xy ~ group, data = longDat)
+
+      IDeq <- c(t1$p.value, t2$`Pr(>F)`[[1]], t3$p.value, t4$p.value) > alpha
+
+      varEqual <- sum(IDeq, na.rm = TRUE) >= criterion
+
+      if(verbose){
+        cat(paste0("\n>> decide.EqualVar <<\n\n",sum(IDeq)," out of ",length(IDeq)," tests for equality of variances indicate equal population variances (p > ",alpha,"):\n\n", paste0("1. ", t1$method," (p = ",round(t1$p.value,digits = 2),")\n2. ",attributes(t2)$heading,"(p = ",round(t2$`Pr(>F)`[[1]],digits = 2),")\n3. ",t3$method," (p = ",round(t3$p.value, digits = 2),")\n4. ",t4$method," (p = ",round(t4$p.value,digits = 2),")\n")))}
+
+    } else {
+      varEqual <- NA
+    }
+
+  } else {
+    varEqual <- NA
+  }
+
+  #   form <-  gsub("[():]|(summary|lm|lmer|lme4|lmerTest|t.test|anova|lmer|cor.test|chiq.test)","",key$stat.test)
+
+  disp(paste0(group,": var.equal set to: ",varEqual),header = FALSE, footer = FALSE)
+  return(varEqual)
+}
+
+tidyDF <- function(df){
+  for(l in seq_along(df$labels)){
+    plyr::ldply(df$labels[[l]], function(d) tidy(data.frame(eval(parse(text = paste0('df$',d))))))
+  }
+}
+
+#' @title try.CATCH both warnings (with value) and errors
+#'
+#' @description
+#'  In longer simulations, aka computer experiments,
+#'  you may want to
+#'  1) catch all errors and warnings (and continue)
+#'  2) store the error or warning messages
+#'
+#'  Here's a solution  (see R-help mailing list, Dec 9, 2010):
+#'
+#' Catch *and* save both errors and warnings, and in the case of
+#' a warning, also keep the computed result.
+#'
+#' @export
+#' @param expr an \R expression to evaluate
+#' @return a list with 'value' and 'warning', where value' may be an error caught.
+#' @author Martin Maechler;
+#' Copyright (C) 2010-2012  The R Core Team
+try.CATCH <- function(expr){
+  W <- NULL
+  w.handler <- function(w){ # warning handler
+    W <<- w
+    invokeRestart("muffleWarning")
+  }
+  list(value = withCallingHandlers(tryCatch(expr, error = function(e) e),
+                                   warning = w.handler),
+       warning = W)
+}
+
+
+#' Rose tinted infix
+#'
+#'
+#' @param x If \code{x} is any of \code{Inf,-Inf,NA,NaN,NULL,length(x)==0}, it will return \code{y}; otherwise it returns \code{x}.
+#' @param y The value to return in case of catastrophy \code{>00<}
+#'
+#' @export
+#' @author Fred Hasselman
+#' @description When your functions wear these rose tinted glasses, the world will appear to be a nicer, fluffier place.
+#' @seealso purrr::%||%
+#' @examples
+#' Inf %00% NA
+#'
+#' numeric(0) %00% ''
+#'
+#' NA %00% 0
+#'
+#' NaN %00% NA
+#'
+#' NULL %00% NA
+`%00%` <- function(x,y){
+  l0<-isna<-isnan<-isinf<-isnll<-FALSE
+  if(length(x)==0){
+    l0=TRUE
+  } else {
+    if(all(is.na(x)))       isna =TRUE
+    if(all(is.nan(x)))      isnan=TRUE
+    if(all(is.infinite(x))) isinf=TRUE
+    if(all(is.null(x)))     isnll=TRUE
+  }
+  if(any(l0,isna,isnan,isinf,isnll)){x<-y}
+  return(x)
+}
+
+init <- function(){
+  # for testing purposes
+  #srcDir <- "~/Documents/GitHub/manylabRs/manylabRs/R/"
+  #source(paste0(srcDir,"C-3PR_ASCII.R"))
+  #source(paste0(srcDir,'getData.R'))
+  #source(paste0(srcDir,'inIT.R'))
+  #source(paste0(srcDir,'ML2_variable_functions.R'))
+  #source(paste0(srcDir,'fRedsRutils.R'))
+
+  # Function inIT will load and -if necessary- install packages passed in a list (unIT will do the reverse operation).
+  in.IT(c("MBESS","reshape2","plyr","tidyverse","metafor","RCurl","openxlsx","broom","httr","compute.es","downloader","car", "lme4", "lmerTest","exact2x2","ggplot2","gplots","gridExtra","lattice","latticeExtra","rio","scales","lubridate"))
+
+}
+
+#' disp
+#'
+#' @param message     A message to be displayed in the Console.
+#' @param header     Print a header of '~' symbols (=\code{TRUE}), or '~' symbols with few words of text (=\code{character vector})
+#' @param footer     Print a footer '~' symbols.
+#'
+#' @description Displays easy-to-spot text in the Console.
+#'
+#' @author Fred Hasselman
+#'
+#' @export
+#'
+disp <- function(message='Hello world!', header = "disp", footer = TRUE){
+
+  ps <- "# "
+
+  msg <- textConnection(message)
+  mWidth <- max(plyr::laply(readLines(msg),nchar))
+  if(!grepl(ps,message)) mWidth <- mWidth+2
+
+  if(is.character(header)){
+    hWidth <- max(plyr::laply(header,nchar))
+    mWidth <- max(hWidth,mWidth)
+  }
+
+  dmessage <- list()
+  for(m in 1:length(message)){
+    # b <- floor((mWidth-nchar(message[m]))/2)
+    e <- mWidth-nchar(message[m])
+    dmessage[[m]] <- paste0(ps,message[m])
+  }
+
+  banner <- paste0(rep('~', mWidth), collapse = "")
+  if(is.character(header)){
+    b <- floor((nchar(banner)-nchar(header))/2)
+    e <- ceiling((nchar(banner)-nchar(header))/2)
+    leader <- paste0('\n\t',paste0(rep('~',b),collapse=""),header,paste0(rep('~',e),collapse=""))
+  }
+  if(header == TRUE){
+    leader <- banner
+  }
+  if(header == FALSE){
+    leader <- paste0(ps)
+  }
+
+  if(footer){
+    cat(paste0('\n\t',leader,'\n\t',dmessage,'\n\t',banner,'\n'))
+  } else {
+    cat(paste0('\n\t',leader,'\n\t',dmessage))
+  }
+  close(msg)
+  return(invisible(message))
+}
+
+
+
+#' Elastic Scaler - A Flexible Rescale Function
+#'
+#' @description The 'elastic scaler'will rescale numeric vectors (1D, or columns in a matrix or data.frame) to a user defined minimum and maximum, either based on the extrema in the data, or, a minimum and maximum defined by the user.
+#'
+#' @param x     Input vector or data frame.
+#' @param mn     Minimum value of original, defaults to \code{min(x, na.rm = TRUE)}.
+#' @param mx     Maximum value of original, defaults to \code{max(x, na.rm = TRUE)}.
+#' @param hi     Minimum value to rescale to, defaults to \code{0}.
+#' @param lo     Maximum value to rescale to, defaults to \code{1}.
+#'
+#'
+#' @details Three uses:
+#' \enumerate{
+#' \item elascer(x)             - Scale x to data range: min(x.out)==0;      max(x.out)==1
+#' \item elascer(x,mn,mx)       - Scale x to arg. range: min(x.out)==mn==0;  max(x.out)==mx==1
+#' \item elascer(x,mn,mx,lo,hi) - Scale x to arg. range: min(x.out)==mn==lo; max(x.out)==mx==hi
+#' }
+#'
+#' @return scaled inout
+#' @export
+#'
+#' @examples
+#' # Works on numeric objects
+#' somenumbers <- cbind(c(-5,100,sqrt(2)),c(exp(1),0,-pi))
+#'
+#' elascer(somenumbers)
+#' elascer(somenumbers,mn=-100)
+#
+#' # Values < mn will return < lo (default=0)
+#' # Values > mx will return > hi (default=1)
+#' elascer(somenumbers,mn=-1,mx=99)
+#'
+#' elascer(somenumbers,lo=-1,hi=1)
+#' elascer(somenumbers,mn=-10,mx=101,lo=-1,hi=4)
+elascer <- function(x,mn=min(x,na.rm=T),mx=max(x,na.rm=T),lo=0,hi=1){
+  UNLIST = FALSE
+  if(!is.data.frame(x)){UNLIST=TRUE}
+  x <- as.data.frame(x)
+  u <- x
+  for(i in 1:NCOL(x)){
+    mn=min(x[,i],na.rm=T)
+    mx=max(x[,i],na.rm=T)
+    if(mn>mx){warning("Minimum (mn) >= maximum (mx).")}
+    if(lo>hi){warning("Lowest scale value (lo) >= highest scale value (hi).")}
+    ifelse(mn==mx,{u[,i]<-rep(mx,length(x[,i]))},{
+      u[,i]<-(((x[i]-mn)*(hi-lo))/(mx-mn))+lo
+      id<-stats::complete.cases(u[,i])
+      u[!id,i]<-0
+    })
+  }
+  if(UNLIST){
+    u <- as.numeric(u[,1])
+  }
+  return(u)
+}
+
+
+center <- function(numvec, na.rm=TRUE, type = c("mean","median")[1]){
+  switch(type,
+         mean   = centroid <- mean(as.numeric(numvec), na.rm=na.rm),
+         median = centroid <- median(as.numeric(numvec), na.rm=na.rm),
+  )
+  return((as.numeric(numvec) - centroid))
+}
+
+normalise <- function(numvec, na.rm=TRUE){
+  (as.numeric(numvec) - mean(as.numeric(numvec),na.rm=na.rm)) / sd(as.numeric(numvec),na.rm=na.rm)
+}
+
+# Help lme4 get a better convergence
+nlopt <- function(par, fn, lower, upper, control) {
+  # Add to call: control = lmerControl(optimizer = "nloptwrap", calc.derivs = FALSE
+  .nloptr <<- res <- nloptr::nloptr(par, fn, lb = lower, ub = upper,
+                                    opts = list(algorithm = "NLOPT_LN_BOBYQA", print_level = 1,
+                                                maxeval = 1000, xtol_abs = 1e-6, ftol_abs = 1e-6))
+  list(par = res$solution,
+       fval = res$objective,
+       conv = if (res$status > 0) 0 else res$status,
+       message = res$message
+  )
+}
+
+# Convert decimal point
+c2p <- function(text,N=1){
+  if(!is.character(text)){text<-as.character(text)}
+  if(sum(grepl("[,]",text))>=N){text <- gsub(",",".",text)}
+  return(text)
+}
+
+# Count missing values in x
+nmissing <- function(x){
+  sum(is.na(x))
+}
+
+## Gives count, mean, standard deviation, standard error of the mean, and confidence interval (default 95%).
+##   data: a data frame.
+##   measurevar: the name of a column that contains the variable to be summariezed
+##   groupvars: a vector containing names of columns that contain grouping variables
+##   na.rm: a boolean that indicates whether to ignore NA's
+##   conf.interval: the percent range of the confidence interval (default is 95%)
+summarySE <- function(data = NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval = .95, .drop=TRUE) {
+  #library(plyr)
+
+  # New version of length which can handle NA's: if na.rm==T, don't count them
+  length2 <- function (x, na.rm=na.rm) {
+    if (na.rm) sum(!is.na(x))
+    else       length(x)
+  }
+
+  # This does the summary. For each group's data frame, return a vector with
+  # N, mean, and sd
+  datac <- plyr::ddply(data, groupvars, .drop=.drop,
+                       .fun = function(xx, col) {
+                         c(N    = length2(xx[[col]], na.rm=na.rm),
+                           mean = mean   (xx[[col]], na.rm=na.rm),
+                           sd   = sd     (xx[[col]], na.rm=na.rm)
+                         )
+                       },
+                       measurevar
+  )
+
+  # Rename the "mean" column
+  #datac <- rename(datac, c("mean" = measurevar))
+
+
+  datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+
+  # Confidence interval multiplier for standard error
+  # Calculate t-statistic for confidence interval:
+  # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+  ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+  datac$ci <- datac$se * ciMult
+
+  return(datac)
+}
+
+
+# ML2 VARIABLE FUNCTIONS -----
+#' Huang.1
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#1_huang}
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis A \code{list} object containing fields \strong{High}, \strong{Low} and \strong{N}
+#'
+#' @section Variables:
+#'
+#' huan1.1_Y1: Y position of the mouse (High SES condition).
+#' huan2.1_Y1: Y position of the mouse (Low SES).
+#' huan1.1_R0 and huan2.1_R0 indicate for each condition whether a click was inside the map (1) or outside (0).
+#'
+#' For each condition a participant must have clicked inside the map (=1) to be included in the analysis.
+#'
+#' @export
+#'
+varfun.Huang.1 <- function(vars){
+  return(list(High = -1*(vars$High[[1]]-238),
+              Low  = -1*(vars$Low[[1]]-238),
+              N    = c(nrow(vars$High),nrow(vars$Low)))
+  )
+}
+
+#' varfun.Kay.1
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#2_kay}
+#'
+#' @param vars      A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @export
+#'
+#' @return Dataset ready for analysis
+#'
+varfun.Kay.1 <- function(vars){
+  #   require(dplyr)
+
+  var.Order <- rowMeans(dplyr::select(vars$Order, one_of(c('kay1.5','kay1.6'))))
+  # [(1) Centered Subjective value = (GP1 + GP2)]$(2)residuals + (3) mean Willingness to engage in goal pursuit
+  var.windex.Order <-lm(scale(vars$Order$kay1.4,scale=F)~var.Order)$residuals + var.Order
+
+  var.DisOrder <- rowMeans(dplyr::select(vars$DisOrder,one_of(c('kay2.5','kay2.6'))))
+  # [(1) Centered Subjective value = (GP1 + GP2)]$(2)residuals + (3) mean Willingness to engage in goal pursuit
+  var.windex.DisOrder <-lm(scale(vars$DisOrder$kay2.4,scale=F)~var.DisOrder)$residuals + var.DisOrder
+
+  return(list(Order=var.windex.Order,
+              DisOrder=var.windex.DisOrder,
+              N = c(length(var.windex.Order),length(var.windex.DisOrder)))
+  )
+}
+
+#' varfun.Alter.1
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#3_alter}
+#'
+#' @param vars       A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @export
+#'
+#' @return Dataset ready for analysis
+#'
+#' @section Variables:
+#'
+#'   Syllogisms to include for each sample
+#'   INCLUSION PERCENTAGE BASED ON
+#'    FLUENT / DISFLUENT SEPERATELY: 1 5 6
+#'    BOTH: 1 5 6
+#'
+
+varfun.Alter.1 <- function(vars){
+  var.correct <- list(s1=c(7),
+                      s2=c(8),
+                      s3=c(5,6,7,8),
+                      s4=c(8),
+                      s5=c(3),
+                      s6=c(8))
+
+  lowP <- .25
+  hiP  <- .75
+
+  # Get correct answers
+  ok.Fluent   <- sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
+  ok.DisFluent<- sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
+
+  # Find columns
+  # Syllogisms to include for each sample
+  # INCLUSION PERCENTAGE BASED ON
+  # FLUENT / DISFLUENT SEPERATELY: 1 5 6
+  # BOTH: 1 5 6
+  #     id.Fluent.cols    <- which((colSums(ok.Fluent)/nrow(ok.Fluent)>lowP)&(colSums(ok.Fluent)/nrow(ok.Fluent)<hiP))
+  #     id.DisFluent.cols <- which((colSums(ok.DisFluent)/nrow(ok.DisFluent)>lowP)&(colSums(ok.DisFluent)/nrow(ok.DisFluent)<hiP))
+
+  id.Fluent.cols    <- c(1, 5, 6)
+  id.DisFluent.cols <- c(1, 5, 6)
+
+  return(list(Fluent    = rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
+              DisFluent = rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols])),
+              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)))
+  )
+}
+
+#' varfun.Alter.2
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#3_alter}
+#'
+#' @param vars       A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+#' @section Variables:
+#'
+#'   Syllogisms to include for each sample
+#'   INCLUSION PERCENTAGE BASED ON
+#'    FLUENT / DISFLUENT SEPERATELY: 1 5 6
+#'    BOTH: 1 5 6
+#'
+
+varfun.Alter.2 <- function(vars){
+  var.correct <- list(s1=c(7),
+                      s2=c(8),
+                      s3=c(5,6,7,8),
+                      s4=c(8),
+                      s5=c(3),
+                      s6=c(8))
+
+  # Get correct answers
+  ok.Fluent   <- sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
+  ok.DisFluent<- sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
+
+  # Syllogisms to include for each sample
+  # First and last
+  id.Fluent.cols      <- c(1,6)
+  id.DisFluent.cols   <- c(1,6)
+
+  return(list(Fluent    = rowSums(ok.Fluent[,id.Fluent.cols]),
+              DisFluent = rowSums(ok.DisFluent[,id.DisFluent.cols]),
+              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)))
+  )
+}
+
+#' varfun.Alter.3
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#3_alter}
+#'
+#' @param vars      A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+#' @section Variables:
+#'
+#'   Syllogisms to include for each sample
+#'   INCLUSION PERCENTAGE BASED ON
+#'    FLUENT / DISFLUENT SEPERATELY: 1 5 6
+#'    BOTH: 1 5 6
+varfun.Alter.3 <- function(vars){
+
+  var.correct <- list(s1=c(7),
+                      s2=c(8),
+                      s3=c(5,6,7,8),
+                      s4=c(8),
+                      s5=c(3),
+                      s6=c(8))
+
+  # Get ids for Alter first
+  id <- sapply(seq_along(vars$RawDataFilter[[1]]$.id), function(i) unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]"))[[1]] == "Alter")
+
+  # Get correct answers for ids Alter first
+  if(sum(id,na.rm=T)>0){
+    ok.Fluent   <- rbind(sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[id, c])%in%var.correct[[c]]))
+    ok.DisFluent<- rbind(sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[id, c])%in%var.correct[[c]]))
+  } else {
+    ok.Fluent    <- rep(FALSE,6)
+    ok.DisFluent <- rep(FALSE,6)
+  }
+
+  # Use 1,5,6
+  id.Fluent.cols    <- c(1,5,6)
+  id.DisFluent.cols <- c(1,5,6)
+
+  return(list(Fluent    = rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
+              DisFluent = rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols])),
+              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)))
+  )
+}
+
+
+#' varfun.Alter.4
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#3_alter}
+#'
+#' @param vars      A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+#' @section Variables:
+#'   Syllogisms to include for each sample
+#'   INCLUSION PERCENTAGE BASED ON
+#'    FLUENT / DISFLUENT SEPERATELY: 1 5 6
+#'    BOTH: 1 5 6
+
+varfun.Alter.4 <- function(vars){
+  var.correct <- list(s1=c(7),
+                      s2=c(8),
+                      s3=c(5,6,7,8),
+                      s4=c(8),
+                      s5=c(3),
+                      s6=c(8))
+
+  # Get ids for Alter first
+  id <- sapply(seq_along(vars$RawDataFilter[[1]]$.id), function(i) unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]"))[[1]] == "Alter")
+
+  # Get correct answers for ids Alter first
+  if(sum(id,na.rm=T)>0){
+    ok.Fluent   <- rbind(sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[id, c])%in%var.correct[[c]]))
+    ok.DisFluent<- rbind(sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[id, c])%in%var.correct[[c]]))
+  } else {
+    ok.Fluent    <- rep(FALSE,6)
+    ok.DisFluent <- rep(FALSE,6)
+  }
+
+  # Syllogisms to include for each sample
+  # First and last
+  id.Fluent.cols      <- c(1,6)
+  id.DisFluent.cols   <- c(1,6)
+
+  return(list(Fluent    = rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
+              DisFluent = rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols])),
+              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)))
+  )
+}
+
+#' varfun.Graham.1
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#4_graham}
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#'
+#' @export
+#'
+#' @return Dataset ready for analysis
+#'
+
+varfun.Graham.1 <- function(vars){
+  return(list(Politics = vars$Politics$politics,
+              Binding  = rowMeans(vars$Binding,na.rm=T),
+              N        = sum(complete.cases(rowMeans(vars$Binding,na.rm=T), vars$Politics$politics)))
+  )
+}
+
+#' varfun.Graham.2
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#4_graham}
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+varfun.Graham.2 <- function(vars){
+  return(list(Politics   = vars$Politics$politics,
+              Individual = rowMeans(vars$Individual, na.rm = TRUE),
+              N          = sum(complete.cases(rowMeans(vars$Individual,na.rm=TRUE), vars$Politics$politics)))
+  )
+}
+
+#' varfun.Rottenstreich.1
+#'
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#5_rottenstreich}
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#'  @export
+#'
+#' @return Dataset ready for analysis
+#'
+varfun.Rottenstreich.1 <- function(vars){
+  return(list(Response  = factor(c(vars$Low[[1]],vars$Certain[[1]]),levels=c(1,2),labels=vars$labels$Response),
+              Condition = factor(c(rep(1,nrow(vars$Low)),rep(2,nrow(vars$Certain))),levels=c(1,2),labels=vars$labels$Condition),
+              N      = c(nrow(vars$Certain),nrow(vars$Low)))
+  )
+}
+
+#' varfun.Bauer.1
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#6_bauer}
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @export
+#'
+#' @return Dataset ready for analysis
+#'
+varfun.Bauer.1 <- function(vars){
+  return(list(Consumer  = vars$Consumer[[2]],
+              Individual= vars$Individual[[2]],
+              N         = c(length(vars$Consumer[[2]]),length(vars$Individual[[2]])))
+  )
+}
+
+#' varfun.Miyamoto.1
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#7_miyamoto}
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @export
+#'
+#' @return Dataset ready for analysis
+#'
+#' @details  \strong{Analysis plan:} An ANCOVA will compare the mean estimates of the author's true attitude across the two conditions, covarying for perceived constraint.
+#'
+#' @section Variables:
+#' miya1.5=true attitude (pro-death condition; higher values=higher support for death penalty);
+#' miya1.7=perceived constraint (pro-death condition; higher values=higher freedom);
+#'
+#' miya2.5=true attitude (against death penalty condition; higher values=higher support for death penalty);
+#' miya2.7=perceived constraint (against death condition; higher values= higher freedom).
+
+varfun.Miyamoto.1 <- function(vars){
+  return(list(Attitude  = c(vars$CapitalCon[[1]],vars$CapitalPro[[1]]),
+              Condition = factor(c(rep(1,nrow(vars$CapitalCon)),rep(2,nrow(vars$CapitalPro))),levels=c(1,2),labels=vars$labels$Condition),
+              Constraint= scale(c(vars$CapitalCon[[2]],vars$CapitalPro[[2]]), scale = FALSE),
+              N = c(nrow(vars$CapitalCon),nrow(vars$CapitalPro)))
+  )
+}
+
+#' varfun.Miyamoto.2
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#7_miyamoto}
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+#' @section Variables:
+#' miya1.5=true attitude (pro-death condition; higher values=higher support for death penalty);
+#' miya1.7=perceived constraint (pro-death condition; higher values=higher freedom);
+#'
+#' miya2.5=true attitude (against death penalty condition; higher values=higher support for death penalty);
+#' miya2.7=perceived constraint (against death condition; higher values= higher freedom).
+
+varfun.Miyamoto.2 <- function(vars){
+  return(list(Attitude  = c(vars$CapitalCon[[1]],vars$CapitalPro[[1]]),
+              Condition = factor(c(rep(1,nrow(vars$CapitalCon)),rep(2,nrow(vars$CapitalPro))),levels=c(1,2),labels=vars$labels$Condition),
+              Constraint= scale(c(vars$CapitalCon[[2]],vars$CapitalPro[[2]]), scale=FALSE),
+              Moderator = scale(c(vars$CapitalCon[[3]],vars$CapitalPro[[3]]), scale=FALSE),
+              N = c(nrow(vars$CapitalCon),nrow(vars$CapitalPro)))
+  )
+}
+
+
+
+
+#' varfun.Inbar.1
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#8_inbar}
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+#' @section Variables:
+#' disg1.11,disg1.12,disg2.10,disg2.12,disg2.13;
+#'
+#' responses on the DS-R are scored as follows: True 1, False 0; Not disgusting 0, Slightly disgusting 0.5, Very disgusting 1
+#'
+
+varfun.Inbar.1 <- function(vars){
+  #   require(dplyr)
+
+  vars$SameKiss$disg1.11 <- -vars$SameKiss$disg1.11
+  vars$SameKiss$disg1.12 <- -vars$SameKiss$disg1.12
+  vars$DiffKiss$disg1.11 <- -vars$DiffKiss$disg1.11
+  vars$DiffKiss$disg1.12 <- -vars$DiffKiss$disg1.12
+
+  vars$SameKiss <- dplyr::mutate(vars$SameKiss,
+                                 DSRs = rowMeans(elascer(dplyr::select(vars$SameKiss, starts_with("disg"))), na.rm = TRUE)
+  )
+  vars$DiffKiss <- dplyr::mutate(vars$DiffKiss,
+                                 DSRd = rowMeans(elascer(dplyr::select(vars$DiffKiss, starts_with("disg"))), na.rm = TRUE)
+  )
+
+  outcome <- c("Intent","Wrong","Encourage")[colnames(vars$SameKiss)[1]==c("inba1.3","inba1.4","inba1.5")]
+
+  colnames(vars$SameKiss)[1] <- outcome
+  colnames(vars$DiffKiss)[1] <- outcome
+
+  return(list(r1=cbind(vars$SameKiss['DSRs'],vars$SameKiss[outcome]),
+              r2=cbind(vars$DiffKiss['DSRd'],vars$DiffKiss[outcome]),
+              N = c(nrow(vars$SameKiss),nrow(vars$DiffKiss)))
+  )
+}
+
+
+
+#' varfun.Inbar.2
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#8_inbar}
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+varfun.Inbar.2 <- function(vars){
+  return(list(SameKiss= vars$SameKiss[[1]],
+              DiffKiss= vars$DiffKiss[[1]],
+              N =  c(nrow(vars$SameKiss),nrow(vars$DiffKiss)))
+  )
+}
+
+
+#' varfun.Critcher.1
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#9_critcher}
+#'
+#' @export
+#'
+#' @section Variables:
+#'  crit1.1= % sold P97 in the US;
+#'  crit2.1= % sold P17 in the US
+#'
+#'  df.P97 <- dplyr::select(tbl_df(ML2.df),which(colnames(ML2.df)%in%ML2.in$study.vars$Condition[1]))
+#'  df.P97 <- slice(df.P97, which((ML2.id[[1]][,1]==T)&(ML2.id[[2]][,1]==T)))
+#'
+#'   df.P17 <- dplyr::select(tbl_df(ML2.df),which(colnames(ML2.df)%in%ML2.in$study.vars$Condition[2]))
+#'   df.P17 <- slice(df.P17, which((ML2.id[[1]][,2]==T)&(ML2.id[[2]][,2]==T)))
+#'
+#'   id.P97 <- ML2.df[ML2.id[[1]][,1]&ML2.id[[2]][,1],ML2.in$study.vars$Condition[1]]
+#'   id.P17 <- ML2.df[ML2.id[[1]][,2]&ML2.id[[2]][,2],ML2.in$study.vars$Condition[2]]
+#'
+
+varfun.Critcher.1 <- function(vars){
+  return(list(P97    = as.numeric(vars$P97$crit1.1),
+              P17    = as.numeric(vars$P17$crit2.1),
+              N      =  c(nrow(vars$P97),nrow(vars$P17)))
+  )
+}
+
+#' van.Lange.1
+#'
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis A \code{list} object containing fields \strong{SVO}, \strong{Siblings} and \strong{N}
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#10_van_lange}
+#'
+#' @export
+#'
+#' @section Variables:
+#'    van.p.1.2_1 TO van.p.1.2_6 are the items of SVO measure.
+#'
+#'   murphy et al. (2011) scoring: SVO degress=arctan [(mean Alloc other - 50)/(mean Allocation self - 50)].
+#'
+#'   See SVO codes (this doc) for the list of paired amounts
+#'   van.p2.1_1_TEXT= # of older siblings;
+#'   van.p2.1_2_TEXT= # of younger siblings.
+#'
+
+varfun.vanLange.1 <- function(vars){
+
+  SVO <-rbind(cbind(c( 85,85 ), c( 85,76 ), c( 85,68 ), c( 85,59 ), c( 85,50 ), c( 85,41 ), c( 85,33 ), c( 85,24 ), c( 85,15 )),
+              cbind(c( 85,15 ), c( 87,19 ), c( 89,24 ), c( 91,28 ), c( 93,33 ), c( 94,37 ), c( 96,41 ), c( 98,46 ), c( 100,50 )),
+              cbind(c( 50,100 ), c( 54,98 ), c( 59,96 ), c( 63,94 ), c( 68,93 ), c( 72,91 ), c( 76,89 ), c( 81,87 ), c( 85,85 )),
+              cbind(c( 50,100 ), c( 54,89 ), c( 59,79 ), c( 63,68 ), c( 68,58 ), c( 72,47 ), c( 76,36 ), c( 81,26 ), c( 85,15 )),
+              cbind(c( 100,50 ), c( 94,56 ), c( 88,63 ), c( 81,69 ), c( 75,75 ), c( 69,81 ), c( 63,88 ), c( 56,94 ), c( 50,100 )),
+              cbind(c( 100,50 ), c( 98,54 ), c( 96,59 ), c( 94,63 ), c( 93,68 ), c( 91,72 ), c( 89,76 ), c( 87,81 ), c( 85,85 )))
+
+  SVO.self  <- SVO[seq(1,11,by=2), ]
+  SVO.other <- SVO[seq(2,12,by=2), ]
+
+  id <- which((vars$RawDataFilter[[1]]$Included==TRUE)&(vars$RawDataFilter[[2]]$Included==TRUE))
+  SVO.index <- plyr::ldply(seq_along(id), function(s){cbind(uID = id[s], SVO = atan(
+    (mean(SVO.other[array(c(1:6,unlist(vars$SVO[s, ])),dim=c(6,2))])-50)/
+      (mean( SVO.self[array(c(1:6,unlist(vars$SVO[s, ])),dim=c(6,2))])-50)))}
+  )
+
+  #vars$SVO$Siblings <- vars$SVO$van.p2.1_1_TEXT+vars$SVO$van.p2.1_2_TEXT
+  SVO.siblings <- cbind.data.frame(uID     = id,
+                                   Older   = as.numeric(vars$RawDataFilter[[2]]$van.p2.1_1_TEXT[id]),
+                                   Younger = as.numeric(vars$RawDataFilter[[2]]$van.p2.1_2_TEXT[id])
+  )
+
+  if(!all(SVO.index$uID==SVO.siblings$uID)){disp(paste("van.Lange.1: uID mismatch in", vars$RawDataFilter[[2]]$.id[1]))}
+
+  SVO.siblings$Total <- rowSums(SVO.siblings[c('Younger','Older')])
+
+  return(list(SVO.index = SVO.index$SVO,
+              Siblings  = SVO.siblings$Total,
+              N         = c(nrow(SVO.index),NULL))
+  )
+}
+
+#' varfun.Hauser.1
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#11_hauser}
+#'
+#' @section Variables:
+#'   haus1.1t = timing (side effect scenario);
+#'   haus2.1t = timing (greater good scenario);
+#'   haus1.2=previous experience (drop if 1 (yes));
+#'   haus2.2=previous experience (drop if 1 (yes));
+#'   haus1.1=morally permissible (side effect scenario; Yes=1);
+#'   haus2.1=morally permissible (greater good scenario; Yes=1).
+#'
+#'
+varfun.Hauser.1 <- function(vars){
+  SE <- unlist(vars$SideEffect[names(vars$SideEffect)[[1]]])
+  GG <- unlist(vars$GreaterGood[names(vars$GreaterGood)[[1]]])
+  N  <- c(nrow(vars$SideEffect),nrow(vars$GreaterGood))
+
+  return(list(Response = factor(c(SE ,GG),levels=c(1,2),labels=vars$labels$Response),
+              Condition = factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition),
+              N = N)
+  )
+}
+
+#' varfun.Anderson.1
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#12_anderson}
+#'
+#' @section Variables:
+#' and1.3=Satisfaction With Life Scale (SWLS, 5 items, Low SocioMetricStatus condition), higher numbers=higher satisfaction; and1.4=Positive And Negative Affect Scale (PANAS, Low SocioMetricStatus condition).
+#' Positive items are 1,4,5,8,9,12,14,17,18,19. Negative items: 2,3,6,7,10,11,13,15,16,20;
+#' Alert: recode responses to negative items before averaging.
+#' and2.3=Satisfaction With Life Scale (SWLS, 5 items, High SocioMetricStatus condition), higher numbers=higher satisfaction; and2.4=Positive And Negative
+#'
+#' Affect Scale (PANAS, High SocioMetricStatus condition). Positive items are 1,4,5,8,9,12,14,17,18,19.
+#' Negative items: 2,3,6,7,10,11,13,15,16,20;
+#' Alert: recode responses to negative items before averaging.
+#'
+#'list(Low=c("and1.3_1", "and1.3_2", "and1.3_3", "and1.3_4", "and1.3_5", "and1.4_1", "and1.4_2", "and1.4_3", "and1.4_4", "and1.4_5", "and1.4_6", "and1.4_7", "and1.4_8", "and1.4_9", "and1.4_10", "and1.4_11", "and1.4_12", "and1.4_13", "and1.4_14", "and1.4_15", "and1.4_16", "and1.4_17", "and1.4_18", "and1.4_19", "and1.4_20"),
+#' High=c("and2.3_1", "and2.3_2", "and2.3_3", "and2.3_4", "and2.3_5", "and2.4_1", "and2.4_2", "and2.4_3", "and2.4_4", "and2.4_5", "and2.4_6", "and2.4_7", "and2.4_8", "and2.4_9", "and2.4_10", "and2.4_11", "and2.4_12", "and2.4_13", "and2.4_14", "and2.4_15", "and2.4_16", "and2.4_17", "and2.4_18", "and2.4_19", "and2.4_20"))
+#'
+#' @export
+#'
+
+varfun.Anderson.1 <- function(vars){
+  #    require(dplyr)
+
+  # Negative
+  PANASlowNA   <- dplyr::select(vars$Low,
+                                one_of(unlist(strsplit(paste0("and1.4_",c(2,3,6,7,10,11,13,15,16,20),sep="|"),"|",fixed=T))))
+  # Negative Recode
+  PANASlowNAr  <- 6-PANASlowNA
+  # Positive
+  PANASlowPA   <- dplyr::select(vars$Low,
+                                one_of(unlist(strsplit(paste0("and1.4_",c(1,4,5,8,9,12,14,17,18,19),sep="|"),"|",fixed=T))))
+  # SWSL
+  SWLSlow  <-  dplyr::select(vars$Low,
+                             one_of(c("and1.3_1", "and1.3_2", "and1.3_3", "and1.3_4", "and1.3_5")))
+
+  # Negative
+  PANAShighNA  <- dplyr::select(vars$High,
+                                one_of(unlist(strsplit(paste0("and2.4_",c(2,3,6,7,10,11,13,15,16,20),sep="|"),"|",fixed=T))))
+  # Negative Recode
+  PANAShighNAr <- 6-PANAShighNA
+  # Positive
+  PANAShighPA  <- dplyr::select(vars$High,
+                                one_of(unlist(strsplit(paste0("and2.4_",c(1,4,5,8,9,12,14,17,18,19),sep="|"),"|",fixed=T))))
+  # SWSL
+  SWLShigh     <- dplyr::select(vars$High,
+                                one_of(c("and2.3_1", "and2.3_2", "and2.3_3", "and2.3_4", "and2.3_5")))
+
+  # Descriptives
+  MhighlowNA  <- scale(c(rowMeans(PANAShighNA), rowMeans(PANASlowNA)))
+  MhighlowNAr <- scale(c(rowMeans(PANAShighNAr), rowMeans(PANASlowNAr)))
+  MhighlowPA  <- scale(c(rowMeans(PANAShighPA), rowMeans(PANASlowPA)))
+  MhighlowSW  <- scale(c(rowMeans(SWLShigh),rowMeans(SWLSlow)))
+
+  return(list(SWB        = (MhighlowSW + MhighlowPA + MhighlowNAr)/3,
+              Condition = factor(c(rep("High",nrow(PANAShighPA)),rep("Low",nrow(PANASlowPA)))),
+              N    = c(nrow(PANAShighPA), nrow(PANASlowPA)))
+  )
+}
+
+#' varfun.Ross.1
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#13_ross1}
+#'
+#' @section Variables:
+#' ross.s1.1 = percentage of peers;
+#' ross.s1.2 = you; values: 1=sign; 2=refuse
+#'
+#' @export
+#'
+
+varfun.Ross.1 <- function(vars){
+  return(list(Peers  = vars$Peers[[1]],
+              You    = factor(vars$You[[1]],levels=c(1,2),labels=vars$labels$Response),
+              N      = c(sum(vars$You[[1]]==1),sum(vars$You[[1]]==2)))
+  )
+}
+
+#' varfun.Ross.2
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#14_ross2}
+#'
+#' @section Variables:
+#' ross.s2.1=percentage of peers;
+#' ross.s2.2=you; values: 1=Pay; 2=Appear in court
+#'
+#' @export
+#'
+
+varfun.Ross.2 <- function(vars){
+  return(list(Peers  = vars$Peers[[1]],
+              You    = factor(vars$You[[1]],levels=c(1,2),labels=vars$labels$Response),
+              N      = c(sum(vars$You[[1]]==1),sum(vars$You[[1]]==2)))
+  )
+}
+
+#' varfun.Giessner.1
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#17_giessner}
+#'
+#' @section Variables:
+#' geis.1.1=long line condition;
+#' geis.2.1=short line condition;
+#' geis.dv_1=dominant;
+#' geis.dv_2=strong;
+#' geis.dv_3=self-confident;
+#' geis.dv_4=control;
+#' geis.dv_5=status;
+#' For all dvs, higher numbers=higher power.
+#'
+#' @export
+#'
+
+varfun.Giessner.1 <- function(vars){
+  #    require(dplyr)
+
+  Long <- vars$Long  %>% dplyr::filter(!is.na(vars$Long[1])  & rowSums(!is.na(vars$Long[-1, ]))>1)
+  Short<- vars$Short %>% dplyr::filter(!is.na(vars$Short[1]) & rowSums(!is.na(vars$Short[-1, ]))>1)
+
+  return(list(Long   = rowMeans(Long[-1]),
+              Short  = rowMeans(Short[-1]),
+              N      = c(nrow(Long),nrow(Short)))
+  )
+}
+
+#' varfun.Tversky.1
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @references    Tversky, A., Kahneman, D. (1981). The framing of decisions and the psychology of choice. Science, 211, 453-458.
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#16_tversky}
+#'
+#' @section Variables:
+#' tver1.1=choice ($250 wall hanging condition, yes=1, no=2);
+#' tver2.1=choice ($30 wall hanging cond, yes=1, no=2).
+#'
+#' tver1.1 Imagine that you are about to purchase a ceramic vase for $30, and a wall hanging for $250. The salesman informs you that the wall hanging you wish to buy is on sale for $240 at the other branch of the store, located 20 minutes drive away. Would you make the trip to the other store?
+#' m  Yes, I would go to the other branch. (1)
+#' m  No, I would not go to the other branch. (2)
+#'
+#' tver2.1 Imagine that you are about to purchase a ceramic vase for $250, and a wall hanging for $30. The salesman informs you that the wall hanging you wish to buy is on sale for $20 at the other branch of the store, located 20 minutes drive away. Would you make the trip to the other store?
+#' m  Yes, I would go to the other branch. (1)
+#' m  No, I would not go to the other branch. (2)
+#'
+#' @export
+#'
+varfun.Tversky.1 <- function(vars){
+  return(list(Condition = factor(c(rep(1,nrow(vars$Cheap)),rep(2,nrow(vars$Expensive))),levels=c(1,2),labels=vars$labels$Condition),
+              Response  = factor(c(vars$Cheap[[1]],vars$Expensive[[1]]),levels=c(1,2),labels=vars$labels$Response),
+              N         = c(nrow(vars$Cheap),nrow(vars$Expensive)))
+  )
+}
+
+#' varfun.Hauser.2
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#17_hauser}
+#'
+#' @section Variables:
+#' hauser3.1=morality judgment (greater good condition);
+#' hauser4.1=morality judgment (foreseen side-effect condition; for both, yes=1, no=2.)
+#' haus3.2 and haus4.2=previous experience (yes=1, no=2);
+#' haus3.1t_3=timing (greater good);
+#' haus4.1t_3=timing (side effect).
+#'
+#' @export
+#'
+#' @references Hauser, M., Cushman, F., Young, L., Kang-Xing Jin, R., & Mikhail, J. (2007). A dissociation between moral judgments and justifications. Mind & Language, 22, 1-21.
+#'
+varfun.Hauser.2 <- function(vars){
+  SideEffect  <- dplyr::filter(vars$SideEffect, vars$SideEffect[vars$labels$Experience[1]] !=1 & vars$SideEffect[vars$labels$Timing[1]]>4)
+  GreaterGood <- dplyr::filter(vars$GreaterGood,vars$GreaterGood[vars$labels$Experience[2]]!=1 & vars$GreaterGood[vars$labels$Timing[2]]>4)
+  N <- c(nrow(SideEffect),nrow(GreaterGood))
+
+  return(list(Response  = factor(c(SideEffect$haus3.1,GreaterGood$haus4.1),levels=c(1,2),labels=vars$labels$Response),
+              Condition = factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition),
+              N = N)
+  )
+}
+
+#' varfun.Risen.1
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#18_risen}
+#'
+#' @section Variables:
+#' rise1.3=likelihood that the professor will call on you (unprepared condition);
+#' rise2.3=likelihood that the professor will call on you (prepared condition);
+#' for both, higher numbers=higher likelihood
+#' Variable = "ex.subjp" which asked if participants were recruited through a university subject pool. 1 = yes, 2 = no.
+#'
+#' @export
+#'
+#' @references  Risen, J. L., & Gilovich, T. (2008). Why people are reluctant to tempt fate. \strong{Journal of Personality and Social Psychology}, 95, 293.
+#'
+
+varfun.Risen.1 <- function(vars){
+  return(list(Unprepared  = as.numeric(vars$Unprepared[[1]]),
+              Prepared    = as.numeric(vars$Prepared[[1]]),
+              N           = c(nrow(vars$Unprepared),nrow(vars$Prepared)))
+  )
+}
+
+
+#' varfun.Risen.2
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#18_risen}
+#'
+#' @section Variables:
+#' rise1.3=likelihood that the professor will call on you (unprepared condition);
+#' rise2.3=likelihood that the professor will call on you (prepared condition);
+#'
+#' for both, higher numbers=higher likelihood   All participants that answer the dependent measure will be included in analysis.
+#' The primary confirmatory test for comparing the original and replication effect size will be based on only the samples using undergraduate students.
+#'
+#' @export
+#'
+#' @references  Risen, J. L., & Gilovich, T. (2008). Why people are reluctant to tempt fate. Journal of Personality and Social Psychology, 95, 293.
+#'
+
+varfun.Risen.2 <- function(vars){
+  return(list(Likelihood = c(vars$Unprepared$rise1.3,vars$Prepared$rise2.3),
+              Condition  = factor(c(rep(1,nrow(vars$Unprepared)),rep(2,nrow(vars$Prepared))),levels=c(1,2),labels=vars$labels$Condition),
+              Gender     = factor(c(vars$Unprepared$sex,vars$Prepared$sex)),
+              N          = c(nrow(vars$Unprepared),nrow(vars$Prepared)))
+  )
+}
+
+#' varfun.Savani.1
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#19_savani}
+#'
+#' @export
+#'
+#' @section Variables:
+#' sava1.N=interpersonal actions;
+#'
+#' sava2.N=personal actions;
+#'
+#' 'sava1.4', 'sava1.5', 'sava1.9', 'sava1.10', 'sava1.15', 'sava1.16' , 'sava1.21', 'sava1.22', 'sava1.27', 'sava1.28', 'sava1.33', 'sava1.34',  'sava1.38', 'sava1.39', 'sava1.43', 'sava1.44'
+#'
+#' sava1.4=choice (buy a gift; 1=choice; 2=no choice);
+#'
+#' sava1.5=importance (buy a gift);
+#'
+#' sava1.9=choice (take a friend at the restaurant; 1=choice; 2=no choice);
+#'
+#' sava1.10=importance (restaurant);
+#'
+#' sava1.15=choice (trip; 1=choice, 2 and 3 = no choice);
+#'
+#' sava1.16=importance (trip);
+#'
+#' sava1.21=choice (dinner; 1=choice, 2 and 3 = no choice);
+#'
+#' sava1.22=importance (dinner);
+#'
+#' sava1.27=choice (errand; 1=choice, 2 and 3 = no choice);
+#'
+#' sava1.28=importance (errand);
+#'
+#' sava1.33=choice (help, 1=choice, 2 & 3 = no choice);
+#'
+#' sava1.34=importance (help);
+#'
+#' sava1.38=choice (advice, 1=choice, 2 & 3 = no choice);
+#'
+#' sava1.39=importance (advice);
+#'
+#' sava1.43=choice (friends, 1=choice, 2 & 3 = no choice);
+#'
+#' sava1.44=importance (friends);
+#'
+#'
+#' sava2.4=choice (buy for yourself; 1=choice; 2=no choice);
+#'
+#' sava2.5=importance (buy for yourself);
+#'
+#' sava2.9=choice (at the restaurant by yourself; 1=choice; 2=no choice);
+#'
+#' sava2.10=importance (restaurant by yourself);
+#'
+#' sava2.15=choice (trip alone; 1=choice, 2 and 3 = no choice);
+#'
+#' sava2.16=importance (trip alone);
+#'
+#' sava2.21=choice (out for dinner; 1=choice, 2 and 3 = no choice);
+#'
+#' sava2.22=importance (out for dinner);
+#'
+#' sava2.27=choice (errand for yourself; 1=choice, 2 and 3 = no choice);
+#'
+#' sava2.28=importance (errand for yourself);
+#'
+#' sava2.33=choice (ask for help, 1=choice, 2 & 3 = no choice);
+#'
+#' sava2.34=importance (ask for help);
+#'
+#' sava2.38=choice (take a course, 1=choice, 2 & 3 = no choice);
+#'
+#' sava2.39=importance (take a course);
+#'
+#' sava2.43=choice (friends, 1=choice, 2 & 3 = no choice);
+#'
+#' sava2.44=importance (friends);
+#'
+#'
+#' For all importance items: higher numbers=higher importance
+#'
+#' we will only include university data collections in the primary confirmatory analysis to be compared with the original effect sizes.
+#'
+#' Data for all participants will be included to examine variability across sample and setting.
+#' However, participants must respond to all choice and importance of choice questions to be included in the analysis.
+#'
+#' @export
+#'
+#' @return Dataset ready for analysis
+#'
+varfun.Savani.1 <- function(vars){
+
+  choice.Int     <- c('sava1.4', 'sava1.9', 'sava1.15', 'sava1.21', 'sava1.27', 'sava1.33', 'sava1.38', 'sava1.43')
+  importance.Int <- c('sava1.5', 'sava1.10', 'sava1.16', 'sava1.22', 'sava1.28', 'sava1.34', 'sava1.39', 'sava1.44')
+
+  choice.Pers     <- c('sava2.4', 'sava2.9', 'sava2.15', 'sava2.21', 'sava2.27', 'sava2.33', 'sava2.38', 'sava2.43')
+  importance.Pers <- c('sava2.5','sava2.10', 'sava2.16', 'sava2.22', 'sava2.28','sava2.34', 'sava2.39', 'sava2.44')
+
+  Response             <- rbind(dplyr::select(vars$Interpersonal,Choice=one_of(choice.Int)),
+                                dplyr::select(vars$Personal,Choice=one_of(choice.Pers))
+  )
+  Condition    <- factor(c(rep(1,nrow(vars$Interpersonal)),rep(2,nrow(vars$Personal))),levels=c(1,2),labels=vars$labels$Condition)
+  id           <- seq_along(Condition)
+
+  Response[Response>1] <- 0
+  Response$Condition   <- Condition
+  Response$uID         <- id
+  Response             <- reshape2::melt(Response, id = c('uID','Condition'), variable.name = 'trialID', value.name = 'Response')
+  #Response$Response    <- factor(Response$Response, levels = c(0,1), labels = vars$labels$Response)
+  #Response$Response    <- relevel(Response$Response, vars$labels$Response[[1]])
+
+  Importance           <- rbind(dplyr::select(vars$Interpersonal, Importance = one_of(importance.Int)),
+                                dplyr::select(vars$Personal, Importance = one_of(importance.Pers))
+  )
+  Importance$uID       <- id
+  Importance$Condition <- Condition
+  Importance           <- reshape2::melt(Importance, id = c('uID','Condition'), variable.name = 'VarLabel',
+                                         value.name = 'Importance')
+  # Probably superfluous
+  matchID              <- Response$uID == Importance$uID
+  Response$Importance[matchID] <- scale(Importance$Importance[matchID],scale=FALSE)
+
+  return(list(Response   = Response$Response,
+              Condition  = Response$Condition,
+              Importance = Response$Importance,
+              uID        = Response$uID,
+              trialID    = as.numeric(Response$trialID),
+              df         = tbl_df(Response),
+              N          = c(nrow(vars$Interpersonal),nrow(vars$Personal)))
+  )
+}
+
+
+
+#' varfun.Norenzayan.1
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#20_norenzayan}
+#'
+#' @section Variables:
+#'  nore1.1 TO nore1.20 provide choices ("belong to" condition)
+#'
+#'  nore2.1 to nore2.20 provide choices ("similar to" condition)
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+#' @references  Norenzayan, A., Smith, E. E., Kim, B. J., & Nisbett, R. E. (2002). Cultural preferences for formal versus intuitive reasoning. Cognitive Science, 26, 653-684.
+#'
+
+varfun.Norenzayan.1 <- function(vars){
+  return(list(Belong  = rowMeans(vars$Belong == matrix(rep(1:2,10), nrow=nrow(vars$Belong), ncol=20, byrow = TRUE), na.rm = T),
+              Similar = rowMeans(vars$Similar == matrix(rep(1:2,10), nrow=nrow(vars$Similar), ncol=20, byrow = TRUE), na.rm = T),
+              N       = c(nrow(vars$Belong), nrow(vars$Similar))))
+
+  # return(list(Belong  = rowMeans(vars$Belong==rep(1:2,10),na.rm=TRUE),
+  #             Similar = rowMeans(vars$Similar==rep(1:2,10),na.rm=TRUE),
+  #             N       = c(nrow(vars$Belong), nrow(vars$Similar)))
+  #        )
+}
+
+#' varfun.Norenzayan.2
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#20_norenzayan}
+#' @note This analysis tests moderating effect of presenting Gati first or after.
+#'
+#' @export
+#'
+#' @references  Norenzayan, A., Smith, E. E., Kim, B. J., & Nisbett, R. E. (2002). Cultural preferences for formal versus intuitive reasoning. Cognitive Science, 26, 653-684.
+#'
+varfun.Norenzayan.2 <- function(vars){
+
+  NafterTG.Bel <- sapply(which((vars$RawDataFilter[[1]]$Included)), function(i) which(unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]")) == "Norenzayan") > which(unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]")) == "Tversky.Gati"))
+  NafterTG.Sim <- sapply(which((vars$RawDataFilter[[2]]$Included)), function(i) which(unlist(strsplit(x = vars$RawDataFilter[[2]]$StudyOrderN[i], split = "[|]")) == "Norenzayan") > which(unlist(strsplit(x = vars$RawDataFilter[[2]]$StudyOrderN[i], split = "[|]")) == "Tversky.Gati"))
+
+  # length(rowSums(vars$Similar[,1:20]==1,na.rm=TRUE)/20)
+
+  NafterTG.Bel <- unlist(NafterTG.Bel)
+  NafterTG.Sim <- unlist(NafterTG.Sim)
+
+  N = c(length(NafterTG.Bel),length(NafterTG.Sim))
+
+  return(list(Response  = c(rowMeans(vars$Belong == matrix(rep(1:2,10), nrow = nrow(vars$Belong), ncol=20, byrow = TRUE),na.rm=T),
+                            rowMeans(vars$Similar== matrix(rep(1:2,10), nrow = nrow(vars$Belong), ncol=20, byrow = TRUE),na.rm=T)),
+              Condition = factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition),
+              Order     = factor(c(as.numeric(NafterTG.Bel), as.numeric(NafterTG.Sim)), levels=c(0,1), labels = vars$labels$Order),
+              uID       = 1:(sum(N,na.rm = TRUE)),
+              N         = N))
+}
+
+#' varfun.Hsee.1
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#21_hsee}
+#'
+#' @section Variables:
+#' hsee1.1=generosity ($90 scarf condition);
+#' hsee2.1=generosity ($110 coat condition);
+#' for both, higher numbers=higher generosity
+#'
+#' @export
+#'
+#' @references Hsee, C. K. (1998). Less is better: When low-value options are valued more highly than high-value options. Journal of Behavioral Decision Making, 11, 107-121.
+#'
+varfun.Hsee.1 <- function(vars){
+  return(list(Scarf  = as.numeric(vars$Scarf[[1]]),
+              Coat   = as.numeric(vars$Coat[[1]]),
+              N      = c(length(as.numeric(vars$Scarf[[1]])),length(as.numeric(vars$Coat[[1]]))))
+  )
+}
+
+#' varfun.Gray.1
+#'
+#' @param vars A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#22_gray}
+#'
+#' @references Gray, K., & Wegner, D. M. (2009). Moral typecasting: divergent perceptions of moral agents and moral patients. Journal of Personality and Social Psychology, 96, 505.
+#'
+#' @export
+#'
+#' @section Variables:
+#'
+#' Adult harms baby scenario; gray1.2=responsibility (adult);  gray1.4=pain (baby).
+#' Baby harms adult scenario; gray2.2=responsibility (baby);  gray2.4=pain (adult)
+#'
+varfun.Gray.1 <- function(vars){
+  return(list(adultHbaby = as.numeric(vars$adultHbaby[[1]]),
+              babyHadult = as.numeric(vars$babyHadult[[1]]),
+              N     = c(length(as.numeric(vars$adultHbaby[[1]])),length(as.numeric(vars$babyHadult[[1]]))))
+  )
+}
+
+#' varfun.Gray.2
+#'
+#' @param vars A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#22_gray}
+#'
+#' @references Gray, K., & Wegner, D. M. (2009). Moral typecasting: divergent perceptions of moral agents and moral patients. Journal of Personality and Social Psychology, 96, 505.
+#'
+#' @export
+#'
+#' @section Variables:
+#' Baby harms adult scenario; gray1.3=intentionality (adult); gray1.4=pain (baby).
+#' Adult harms baby scenario; gray2.3=intentionality (baby); gray2.4=pain (adult)
+#'
+
+varfun.Gray.2 <- function(vars){
+  return(list(adultHbaby = as.numeric(vars$adultHbaby[[1]]),
+              babyHadult = as.numeric(vars$babyHadult[[1]]),
+              N     = c(length(as.numeric(vars$adultHbaby[[1]])),length(as.numeric(vars$babyHadult[[1]])))))
+}
+
+#' varfun.Zhong.1
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#23_zhong}
+#'
+#' @export
+#'
+#' @section Variables:
+#' zhon1.1= unethical condition;
+#' zhon2.1=ethical condition;
+#'
+#' zhon.dv.1_1 TO zhon.dv.1_10=desirability of products (both conditions);
+#' higher numbers=higher desirability;
+#'
+#' Products list:
+#'
+#' Clean:
+#' Dove shower soap (zhon.dv.1_2),
+#' Crest toothpaste (zhon.dv.1_3),
+#' Windex glass cleaner (zhon.dv.1_7),
+#' Lysol countertop disinfectant (zhon.dv.1_8),
+#' Tide laundry detergent (zhon.dv.1_10)
+#'
+#' Not-clean:
+#' Post-it notes (zhon.dv.1_1),
+#' Nantucket Nectars juice (zhon.dv.1_4),
+#' Energizer batteries (zhon.dv.1_5),
+#' Sony cd cases (zhon.dv.1_6),
+#' Snickers candy bar (zhon.dv.1_9),
+#'
+#' @references Zhong, C. B., & Liljenquist, K. (2006). Washing away your sins: Threatened morality and physical cleansing. Science, 313, 1451???1452.
+#'
+varfun.Zhong.1 <- function(vars){
+  # First column is nCopied
+  idClean <- c(2,3,7,8,10)+1
+  idOther <- c(1,4,5,6,9)+1
+
+  return(list(Ethical   = rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE),
+              Unethical = rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE),
+              N         = c(length(rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE)), length(rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE))))
+  )
+}
+
+#' varfun.Zhong.2
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#23_zhong}
+#'
+#' @export
+#'
+#' @section Variables:
+#' zhon1.1= unethical condition;
+#' zhon2.1=ethical condition;
+#'
+#' zhon.dv.1_1 TO zhon.dv.1_10=desirability of products (both conditions);
+#' higher numbers=higher desirability;
+#'
+#' Products list:
+#'
+#' Clean:
+#' Dove shower soap (zhon.dv.1_2),
+#' Crest toothpaste (zhon.dv.1_3),
+#' Windex glass cleaner (zhon.dv.1_7),
+#' Lysol countertop disinfectant (zhon.dv.1_8),
+#' Tide laundry detergent (zhon.dv.1_10)
+#'
+#' Not-clean:
+#' Post-it notes (zhon.dv.1_1),
+#' Nantucket Nectars juice (zhon.dv.1_4),
+#' Energizer batteries (zhon.dv.1_5),
+#' Sony cd cases (zhon.dv.1_6),
+#' Snickers candy bar (zhon.dv.1_9),
+#'
+#'
+#' @references Zhong, C. B., & Liljenquist, K. (2006). Washing away your sins: Threatened morality and physical cleansing. Science, 313, 1451--1452.
+#'
+varfun.Zhong.2 <- function(vars){
+  # library(lme4)
+  # library(lmerTest)
+
+  idClean <- c(2,3,7,8,10)+1
+  idOther <- c(1,4,5,6,9)+1
+
+  return(list(Response  = c(rowMeans(vars$Ethical[,idClean]),
+                            rowMeans(vars$Ethical[,idOther]),
+                            rowMeans(vars$Unethical[,idClean]),
+                            rowMeans(vars$Unethical[,idOther])
+  ),
+  Condition = factor(c(rep(1,times=nrow(vars$Ethical)),
+                       rep(1,times=nrow(vars$Ethical)),
+                       rep(2,times=nrow(vars$Unethical)),
+                       rep(2,times=nrow(vars$Unethical))
+  ), levels=c(1,2),labels=vars$labels$Condition
+  ),
+  Product   = factor(c(rep(1,times=nrow(vars$Ethical)),
+                       rep(2,times=nrow(vars$Ethical)),
+                       rep(1,times=nrow(vars$Unethical)),
+                       rep(2,times=nrow(vars$Unethical))
+  ), levels=c(1,2),labels=vars$labels$Product
+  ),
+  uID       = c(seq_along(vars$Ethical[[1]]),
+                seq_along(vars$Ethical[[1]]),
+                max(seq_along(vars$Ethical[[1]])) + seq_along(vars$Unethical[[1]]),
+                max(seq_along(vars$Ethical[[1]])) + seq_along(vars$Unethical[[1]])
+  ),
+  N         = c(nrow(vars$Ethical),nrow(vars$Unethical)))
+  )
+}
+
+#' varfun.Zhong.3
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#23_zhong}
+#'
+#' @return Dataset ready for analysis
+#'
+#' @export
+#'
+#' @references Zhong, C. B., & Liljenquist, K. (2006). Washing away your sins: Threatened morality and physical cleansing. Science, 313, 1451???1452.
+#'
+#' @section Variables:
+#' zhon1.1= unethical condition;
+#' zhon2.1=ethical condition;
+#'
+#' zhon.dv.1_1 TO zhon.dv.1_10=desirability of products (both conditions);
+#' higher numbers=higher desirability;
+#'
+#' Products list:
+#'
+#' Clean:
+#' Dove shower soap (zhon.dv.1_2),
+#' Crest toothpaste (zhon.dv.1_3),
+#' Windex glass cleaner (zhon.dv.1_7),
+#' Lysol countertop disinfectant (zhon.dv.1_8),
+#' Tide laundry detergent (zhon.dv.1_10)
+#'
+#' Not-clean:
+#' Post-it notes (zhon.dv.1_1),
+#' Nantucket Nectars juice (zhon.dv.1_4),
+#' Energizer batteries (zhon.dv.1_5),
+#' Sony cd cases (zhon.dv.1_6),
+#' Snickers candy bar (zhon.dv.1_9),
+#'
+varfun.Zhong.3 <- function(vars){
+  idClean <- c(2,3,7,8,10)+1
+  idOther <- c(1,4,5,6,9)+1
+
+  return(list(Ethical   = rowMeans(vars$Ethical[ ,idOther],na.rm = TRUE),
+              Unethical = rowMeans(vars$Unethical[ ,idOther], na.rm = TRUE),
+              N         = c(length(rowMeans(vars$Ethical[ ,idOther],na.rm = TRUE)),
+                            length(rowMeans(vars$Unethical[ ,idOther], na.rm = TRUE))))
+  )
+}
+
+#' varfun.Schwarz.1
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#24_schwarz}
+#'
+#' @section Variables:
+#' schw1.1=life sat (first);
+#' schw1.2=partner satisfaction (second);
+#' schw2.1=partner satisfaction (first);
+#' schw2.2=life sat (second).
+#' for all, higher numbers=higher satisfaction
+#'
+#' @export
+#'
+#' @references Schwarz, N., Strack, F., & Mai, H. P. (1991). Assimilation and contrast effects in part-whole question sequences: A conversational logic analysis. \strong{Public Opinion Quarterly, 55}, 3-23.
+#'
+varfun.Schwarz.1 <- function(vars){
+  return(list(r1 = cbind(vars$SpecificFirst[,1],vars$SpecificFirst[,2]),
+              r2 = cbind(vars$GlobalFirst[,1],vars$GlobalFirst[,2]),
+              N  = c(nrow(vars$SpecificFirst),nrow(vars$GlobalFirst)))
+  )
+}
+
+#' varfun.Schwarz.2
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#24_schwarz}
+#'
+#' @details \strong{Analysis plan:} We will compute the correlation between responses to the general and
+#'  specific question in each item order condition, and then compare the correlations using
+#'  the Fisher r-to-z transformation. Participants with valid responses to both items will
+#'  be included in the analysis.
+#'
+#'
+#'  @export
+#'
+#' @references Schwarz, N., Strack, F., & Mai, H. P. (1991). Assimilation and contrast effects in part-whole question sequences: A conversational logic analysis. \strong{Public Opinion Quarterly, 55}, 3-23.
+#'
+varfun.Schwarz.2 <- function(vars){
+  id <- sapply(seq_along(vars$RawDataFilter[[1]]$.id), function(i) unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]"))[[1]] == "Schwarz")
+  r1 <- na.exclude(cbind(vars$SpecificFirst[id,1], vars$SpecificFirst[id,2]))
+  r2 <- na.exclude(cbind(vars$GlobalFirst[id,1], vars$GlobalFirst[id,2]))
+  return(list(r1 = r1,
+              r2 = r2,
+              N  = c(nrow(r1),nrow(r2))
+  )
+  )
+}
+
+#' varfun.Shafir.1
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#25_shafir}
+#'
+#' \strong{CHANGED} The analysis in the orignal article was likely as follows:
+#'
+#' - Count number of Parent B choices in both conditions
+#' - Sum the proportions
+#' - Divide by 2 and test against proportion = .5
+#'
+#' @export
+#'
+#' @section Variables:
+#' shaf1.1=choice (award condition; Parent A=1, Parent B=2);
+#' shaf2.1=choice (deny condition; Parent A=1, Parent B=2)
+#'
+#' @references Shafir, E. (1993). Choosing versus rejecting: Why some options are both better and worse than others. Memory & Cognition, 21, 546-556.
+#'
+varfun.Shafir.1 <- function(vars){
+  Response = factor(c(vars$Award$shaf1.1,vars$Deny$shaf2.1), levels = c(1,2),labels = c("parent A", "Parent B"))
+  N        = c(length(na.exclude(vars$Award$shaf1.1)), length(na.exclude(vars$Deny$shaf2.1)))
+
+  return(list(Response  = Response,
+              Condition = factor(c(rep("Award",N[1]), rep("Deny",N[2]))),
+              ParentB   = sum(c(sum(vars$Award$shaf1.1 == 2, na.rm = TRUE) / N[1],
+                                sum(vars$Deny$shaf2.1  == 2, na.rm = TRUE) / N[2]),
+                              na.rm = TRUE)/2,
+              N         = N #c(nrow(vars$Award), nrow(vars$Deny))
+  )
+  )
+  # prop.test(x = ParentB, n=sum(N), p = .5, conf.level=stat.params[[1]], alternative = stat.params[[4]])
+  # prop.test(x = .6, n=170, p = .5)
+}
+
+#' varfun.Zaval.1
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#26_zaval}
+#' @section Variables:
+#' zav1.1 TO zav1.13 provide COLD primes.
+#' zav2.1 TO zav2.13 provide HEAT primes.
+#' zav.dv.2=belief;
+#' zav.dv.3=concern;
+#' higher numbers=higher belief/concern.
+#'
+#' @export
+#'
+#' @references Zaval, L., Keenan, E. A., Johnson, E. J., & Weber, E. U. (2014). How warm days increase belief in global warming. \strong{Nature Climate Change}, 4, 143-147.
+#'
+varfun.Zaval.1 <- function(vars){
+
+  idC <- vars$Cold$zav.include.strict&(vars$Cold$zav.condition==1)
+  idH <- vars$Heat$zav.include.strict&(vars$Heat$zav.condition==2)
+
+  return(list(Cold = as.numeric(unlist(vars$Cold[idC,1])),
+              Heat = as.numeric(unlist(vars$Heat[idH,1])),
+              N    = c(length(as.numeric(unlist(vars$Cold[idC,1]))),length(as.numeric(unlist(vars$Heat[idH,1]))))
+  )
+  )
+}
+
+
+#' varfun.Knobe.1
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#27_knobe}
+#'
+#' @section Variables:
+#'   knob1.3=intentionality (help condition);
+#'   knob2.3=intentionality (harm condition);
+#'   for both, higher numbers=higher intentionality
+#'
+#' @export
+#'
+#' @references Knobe, J. (2003). Intentional action and side effects in ordinary language. Analysis, 63, 190-193.
+#'
+varfun.Knobe.1 <- function(vars){
+  return(list(Help = unlist(vars$Help),
+              Harm = unlist(vars$Harm),
+              N    = c(length(unlist(vars$Help)), length(unlist(vars$Harm))))
+  )
+}
+
+#' varfun.Knobe.2
+#'
+#' @param vars    A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#27_knobe}
+#'
+#' @section Variables:
+#'   knob1.4=intentionality (praise condition);
+#'   knob2.4=intentionality (blame condition);
+#'   for both, higher numbers=higher intentionality
+#'
+#' @export
+#'
+#' @references Knobe, J. (2003). Intentional action and side effects in ordinary language. Analysis, 63, 190-193.
+#'
+
+varfun.Knobe.2 <- function(vars){
+  return(list(Praise = unlist(vars$Praise),
+              Blame  = unlist(vars$Blame),
+              N    = c(length(unlist(vars$Praise)), length(unlist(vars$Blame))))
+  )
+}
+
+#' varfun.Gati.1
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#28_gati}
+#'
+#' @export
+#'
+#' @references Tversky, A., & Gati, I. (1978). Studies of similarity. \strong{Cognition and categorization}, 1, 79-98.
+#'
+
+varfun.Gati.1 <- function(vars){
+
+  same <- any(grepl("(gati(1|2)(s))+",colnames(vars[[1]])))
+
+  CounterBalanceA <- list(P1st = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22),
+                          P2nd = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21))
+  CounterBalanceB <- list(P1st = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21),
+                          P2nd = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22))
+
+  dfA     <- vars[[1]]
+  dfB     <- vars[[2]]
+
+  dfA$uID <- 1:nrow(dfA)
+  dfA$CounterBalance <- 1
+
+  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  dfB$CounterBalance <- 2
+
+  dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfA$itemID <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfA$itemID))
+  dfA$Condition <- 1
+  dfA$Condition[dfA$itemID%in%CounterBalanceA$P2nd] <- 2
+
+  dfB <- reshape2::melt(dfB,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfB$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfB$itemID))
+  dfB$Condition <- 1
+  dfB$Condition[dfB$itemID%in%CounterBalanceB$P2nd] <- 2
+
+  df <- as.data.frame(rbind(dfA,dfB))
+
+  df$Condition       <- factor(df$Condition,levels=c(1,2),labels=c('Prominent1st','Prominent2nd'))
+  if(same){
+    df$Condition   <-  relevel(df$Condition,ref = 'Prominent2nd')
+  } else {
+    df$Condition <-  relevel(df$Condition,ref = 'Prominent1st')
+  }
+  df$CounterBalance  <- factor(df$CounterBalance,levels=c(1,2),labels=c('CBA','CBB'))
+
+  df <- df[order(df$uID,df$itemID), ]
+
+  #CounterBalance = df$CounterBalance,
+
+  return(list(DV         = df$DV,
+              Condition  = df$Condition,
+              uID        = df$uID,
+              itemID     = df$itemID,
+              N          = c(nrow(vars[[1]]),nrow(vars[[2]])))
+  )
+}
+
+#' varfun.Gati.2
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#28_gati}
+#'
+#' @export
+#'
+#' @references Tversky, A., \& Gati, I. (1978). Studies of similarity. \strong{Cognition and categorization}, 1, 79-98.
+#'
+
+varfun.Gati.2 <- function(vars){
+  #    require(dplyr)
+
+  same <- any(grepl("(gati(1|2)(s))+",colnames(vars[[1]])))
+
+  CounterBalanceA <- list(P1st = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22),
+                          P2nd = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21))
+  CounterBalanceB <- list(P1st = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21),
+                          P2nd = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22))
+
+  dfA     <- vars[[1]]
+  dfB     <- vars[[2]]
+
+  dfA$uID <- 1:nrow(dfA)
+  dfA$CounterBalance <- 1
+
+  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  dfB$CounterBalance <- 2
+
+  dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfA$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfA$itemID))
+  dfA$Condition <- 1
+  dfA$Condition[dfA$itemID%in%CounterBalanceA$P2nd] <- 2
+
+  dfB <- reshape2::melt(dfB,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfB$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfB$itemID))
+  dfB$Condition <- 1
+  dfB$Condition[dfB$itemID%in%CounterBalanceB$P2nd] <- 2
+
+  df <- as.data.frame(rbind(dfA,dfB))
+
+  df$Condition       <- factor(df$Condition,levels=c(1,2),labels=c('Prominent1st','Prominent2nd'))
+  if(same){
+    df$Condition   <-  relevel(df$Condition,ref = 'Prominent2nd')
+  } else {
+    df$Condition <-  relevel(df$Condition,ref = 'Prominent1st')
+  }
+  df$CounterBalance  <- factor(df$CounterBalance,levels=c(1,2),labels=c('CBA','CBB'))
+
+  #df <- df[order(df$uID,df$itemID), ]
+
+  # Suibject based dataset
+  df.subj <- summarize(group_by(df, uID, Condition, CounterBalance),
+                       stimDVm = mean(DV,na.rm = TRUE),
+                       # study.order = paste0(unique(study.order), collapse = "|"),
+                       # Country = paste0(unique(Country), collapse = "|")
+  )
+
+  # df.subj1 <- summarize(group_by(df, uID, Condition, CounterBalance), stimDVsd = sd(DV, na.rm = TRUE))
+  # df.subj2 <- summarize(group_by(df, uID, Condition, CounterBalance), Ncases = n())
+
+  df.subj.wide  <- tidyr::spread(df.subj, key = Condition, value = stimDVm)
+  # df.subj.wide1 <- tidyr::spread(df.subj1, key = Condition, value = stimDVsd)
+  # df.subj.wide2 <- tidyr::spread(df.subj2, key = Condition, value = Ncases)
+  #
+  # df.subj.wide$Prominent1stSD     <- df.subj.wide1$Prominent1st
+  # df.subj.wide$Prominent2ndSD     <- df.subj.wide1$Prominent2nd
+  # df.subj.wide$Prominent1stNcases <- df.subj.wide2$Prominent1st
+  # df.subj.wide$Prominent2ndNcases <- df.subj.wide2$Prominent2nd
+  #
+  # df.subj.wide$Asymmetry  = df.subj.wide$Prominent1st-df.subj.wide$Prominent2nd
+
+  if(same){
+    Asymmetry <-  df.subj.wide$Prominent2nd-df.subj.wide$Prominent1st
+  } else {
+    Asymmetry <- df.subj.wide$Prominent1st-df.subj.wide$Prominent2nd
+  }
+
+
+  return(list(Asymmetry  = Asymmetry,
+              CompareTo  = 0,
+              N          = c(nrow(df.subj.wide),NULL)
+  )
+  )
+}
+
+#' varfun.Gati.3
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#28_gati}
+#'
+#' @export
+#'
+#' @references Tversky, A., & Gati, I. (1978). Studies of similarity. \strong{Cognition and categorization}, 1, 79-98.
+#'
+
+varfun.Gati.3 <- function(vars){
+  #    require(dplyr)
+
+  same <- any(grepl("(gati(1|2)(s))+",colnames(vars[[1]])))
+
+  CounterBalanceA <- list(P1st = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22),
+                          P2nd = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21))
+  CounterBalanceB <- list(P1st = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21),
+                          P2nd = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22))
+
+  dfA     <- vars[[1]]
+  dfB     <- vars[[2]]
+
+  dfA$uID <- 1:nrow(dfA)
+  dfA$CounterBalance <- 1
+
+  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  dfB$CounterBalance <- 2
+
+  dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfA$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfA$itemID))
+  dfA$Condition <- 1
+  dfA$Condition[dfA$itemID%in%CounterBalanceA$P2nd] <- 2
+
+  dfB <- reshape2::melt(dfB,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfB$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfB$itemID))
+  dfB$Condition <- 1
+  dfB$Condition[dfB$itemID%in%CounterBalanceB$P2nd] <- 2
+
+  df <- as.data.frame(rbind(dfA,dfB))
+
+  df$Condition       <- factor(df$Condition,levels=c(1,2),labels=c('Prominent1st','Prominent2nd'))
+  if(same){
+    df$Condition   <-  relevel(df$Condition,ref = 'Prominent1st')
+  } else {
+    df$Condition <-  relevel(df$Condition,ref = 'Prominent2nd')
+  }
+  df$CounterBalance  <- factor(df$CounterBalance,levels=c(1,2),labels=c('CBA','CBB'))
+
+  df <- df[order(df$uID,df$itemID), ]
+
+  # Item based dataset
+  df.stim <- summarize(group_by(df, itemID, Condition), # interaction(Condition, CounterBalance)),
+                       stimDV = mean(DV,na.rm = TRUE)
+                       #  stimSD = sd(DV, na.rm = TRUE),
+                       #  N = n()
+  )
+
+  return(list(DV        = df.stim$stimDV,
+              Condition = df.stim$Condition,
+              N         = c( sum(df.stim$Condition%in%"Prominent1st"), NULL)
+  )
+  )
+}
+
+
+#' varfun.Gati.4
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#28_gati}
+#'
+#' @note This analysis tests moderating effect of presenting Norenzayan first or after.
+#'
+#' @export
+#'
+#' @references Tversky, A., & Gati, I. (1978). Studies of similarity. \strong{Cognition and categorization}, 1, 79-98.
+#'
+
+varfun.Gati.4 <- function(vars){
+
+  same <- any(grepl("(gati(1|2)(s))+",colnames(vars[[1]])))
+
+  CounterBalanceA <- list(P1st = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22),
+                          P2nd = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21))
+  CounterBalanceB <- list(P1st = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21),
+                          P2nd = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22))
+
+  dfA     <- vars[[1]]
+  dfB     <- vars[[2]]
+
+  dfA$uID <- 1:nrow(dfA)
+  dfA$CounterBalance <- 1
+
+  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  dfB$CounterBalance <- 2
+
+  dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfA$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfA$itemID))
+  dfA$Condition <- 1
+  dfA$Condition[dfA$itemID%in%CounterBalanceA$P2nd] <- 2
+
+  dfB <- reshape2::melt(dfB,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfB$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfB$itemID))
+  dfB$Condition <- 1
+  dfB$Condition[dfB$itemID%in%CounterBalanceB$P2nd] <- 2
+
+  df <- as.data.frame(rbind(dfA,dfB))
+
+  df$Condition       <- factor(df$Condition,levels=c(1,2),labels=c('Prominent1st','Prominent2nd'))
+  if(same){
+    df$Condition   <-  relevel(df$Condition,ref = 'Prominent1st')
+  } else {
+    df$Condition <-  relevel(df$Condition,ref = 'Prominent2nd')
+  }
+  df$CounterBalance  <- factor(df$CounterBalance,levels=c(1,2),labels=c('CBA','CBB'))
+
+  df <- df[order(df$uID,df$itemID), ]
+
+  # Suibject based dataset
+  df.subj <- summarize(group_by(df, uID, Condition),
+                       stimDV = mean(DV,na.rm = TRUE)
+  )
+
+  df.subj.wide <- tidyr::spread(df.subj, key = Condition, value = stimDV)
+
+
+  TGafterN.cbA <- sapply(which((vars$RawDataFilter[[1]]$Included)), function(i) which(unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]")) == "Tversky.Gati") > which(unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]")) == "Norenzayan"))
+  TGafterN.cbB <- sapply(which((vars$RawDataFilter[[2]]$Included)), function(i) which(unlist(strsplit(x = vars$RawDataFilter[[2]]$StudyOrderN[i], split = "[|]")) == "Tversky.Gati") > which(unlist(strsplit(x = vars$RawDataFilter[[2]]$StudyOrderN[i], split = "[|]")) == "Norenzayan"))
+
+  TGafterN.cbA <- unlist(TGafterN.cbA)
+  TGafterN.cbB <- unlist(TGafterN.cbB)
+
+  Order.n <- c(as.numeric(TGafterN.cbA), as.numeric(TGafterN.cbB))
+
+  if(same){
+    Asymmetry <-  df.subj.wide$Prominent2nd-df.subj.wide$Prominent1st
+  } else {
+    Asymmetry <- df.subj.wide$Prominent1st-df.subj.wide$Prominent2nd
+  }
+
+  return(list(Asymmetry  = Asymmetry,
+              Order      = factor(Order.n, levels=c(0,1), labels = vars$labels$Order),
+              N          = c(sum(Order.n==0,na.rm = TRUE),sum(Order.n==1,na.rm = TRUE))
+  )
+  )
+
+
+  # dfA$asym <- rowMeans(dplyr::select(dfA,which(as.numeric(gsub("(gati(1|2)(s|d)[.])","",colnames(dfA)))%in%CounterBalanceA$P2nd)),na.rm=TRUE)-rowMeans(select(dfA,which(as.numeric(gsub("(gati(1|2)(s|d)[.])","",colnames(dfA)))%in%CounterBalanceA$P1st)),na.rm=TRUE)
+  #
+  # dfB$asym <- rowMeans(dplyr::select(dfB,which(as.numeric(gsub("(gati(1|2)(s|d)[.])","",colnames(dfB)))%in%CounterBalanceB$P2nd)),na.rm=TRUE)-rowMeans(select(dfB,which(as.numeric(gsub("(gati(1|2)(s|d)[.])","",colnames(dfB)))%in%CounterBalanceB$P1st)),na.rm=TRUE)
+
+  return(list(Asymmetry  = c(dfA$asym,dfB$asym),
+              Order      = factor(c(as.numeric(TGafterN.cbA), as.numeric(TGafterN.cbB)), levels=c(0,1), labels = vars$labels$Order),
+              N          = c(length(dfA$asym),length(dfB$asym)))
+  )
+}
+
+
+#' varfun.Gati.5
+#'
+#' @param vars     A list object generated by \code{\link{get.sourceData}} containing cleaned data and variable labels.
+#'
+#' @return Dataset ready for analysis
+#'
+#' @description \url{https://manylabsopenscience.github.io/ML2_PoPS_proposal#28_gati}
+#'
+#' @export
+#'
+#' @references Tversky, A., & Gati, I. (1978). Studies of similarity. \strong{Cognition and categorization}, 1, 79-98.
+#'
+varfun.Gati.5 <- function(vars){
+
+  same <- any(grepl("(gati(1|2)(s))+",colnames(vars[[1]])))
+
+  CounterBalanceA <- list(P1st = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22),
+                          P2nd = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21))
+  CounterBalanceB <- list(P1st = c(4, 6, 7, 8, 9, 10, 13, 15, 20, 21),
+                          P2nd = c(2, 3, 5, 11, 12, 14, 16, 17, 18, 19, 22))
+
+  dfA     <- vars[[1]]
+  dfB     <- vars[[2]]
+
+  dfA$uID <- 1:nrow(dfA)
+  dfA$CounterBalance <- 1
+
+  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  dfB$CounterBalance <- 2
+
+  dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfA$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfA$itemID))
+  dfA$Condition <- 1
+  dfA$Condition[dfA$itemID%in%CounterBalanceA$P2nd] <- 2
+
+  dfB <- reshape2::melt(dfB,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
+
+  dfB$itemID    <- as.numeric(gsub("(gati(1|2)(s|d)[.])","",dfB$itemID))
+  dfB$Condition <- 1
+  dfB$Condition[dfB$itemID%in%CounterBalanceB$P2nd] <- 2
+
+  df <- as.data.frame(rbind(dfA,dfB))
+
+  df$Condition       <- factor(df$Condition,levels=c(1,2),labels=c('Prominent1st','Prominent2nd'))
+  if(same){
+    df$Condition   <-  relevel(df$Condition,ref = 'Prominent1st')
+  } else {
+    df$Condition <-  relevel(df$Condition,ref = 'Prominent2nd')
+  }
+  df$CounterBalance  <- factor(df$CounterBalance,levels=c(1,2),labels=c('CBA','CBB'))
+
+  df <- df[order(df$uID,df$itemID), ]
+
+  # Item based dataset
+  df.stim <- summarize(group_by(df, itemID, Condition),
+                       stimDV = mean(DV,na.rm = TRUE),
+                       stimSD = sd(DV, na.rm = TRUE),
+                       N = n()
+  )
+
+  return(list(DV        = df.stim$stimDV,
+              Condition = df.stim$Condition,
+              N         = c( sum(df.stim$Condition%in%"Prominent1st"), NULL))
+  )
+}
+
+
+# Install and load packages ----
+
+#' @title Initialise It
+#' @description Load and/or install R packages
+#'
+#' @param need    A vector of package names to be loaded. The wrapper functions have a predefinded \code{need} list and can be used as shortcuts (see details).
+#' @param inT    Logical. If \code{TRUE} (default), packages in \code{need} wil be installed if they are not available on the system.
+#'
+#' @details \code{in.IT} will check if the Packages in the list argument \code{need} are installed on the system and load them. If \code{inT=TRUE} (default), it will first install the packages if they are not present and then proceed to load them.
+#'
+#' @export
+#'
+#' @author Fred Hasselman
+#'
+#' @family initialise packages
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{in.IT(c("reshape2", "plyr", "dplyr"))}
+in.IT <- function(need=NULL,inT=TRUE){
+  ip <- .packages(all.available=TRUE)
+  if(any((need %in% ip)==FALSE)){
+    if(inT==TRUE){
+      install.packages(need[!(need %in% ip)])
+    } else {
+      cat('Package(s):\n',paste(need[(need %in% ip)==FALSE],sep='\n'),'\nnot installed.\nUse in.IT(c("packagename1","packagename2",...),inT=TRUE)')
+      need <- need[(need %in% ip)==TRUE]
+    }
+  }
+  ok <- sapply(1:length(need),function(p) require(need[[p]],character.only=TRUE))
+}
+
+
+#' @title Un-initialise It
+#' @description Unload and/or uninstall R packages.
+#' @param loose    A vector of package names to be unloaded.
+#' @param unT    Logical. If \code{TRUE}, packages in \code{loose} wil be un-installed if they are available on the system.
+#'
+#' @details \code{un.IT}will check if the Packages in the list argument \code{loose} are installed on the system and unload them. If \code{unT=TRUE} it will first unload the packages if they are loaded, and then proceed to uninstall them.
+#'
+#' @export
+#' @keywords internal
+#'
+#' @author Fred Hasselman
+#'
+#' @family initialise packages
+#'
+#' @examples
+#' \dontrun{un.IT(loose = c("reshape2", "plyr", "dplyr"), unT = FALSE)}
+un.IT <- function(loose,unT=FALSE){
+  dp <- .packages()
+  if(any(loose %in% dp)){
+    for(looseLib in loose[(loose %in% dp)]){detach(paste0("package:",looseLib), unload=TRUE,character.only=TRUE)}
+  }
+  rm(dp)
+  if(unT==TRUE){
+    dp <- .packages(all.available=TRUE)
+    if(any(loose %in% dp)){remove.packages(loose[(loose %in% dp)])}
+  }
+}
+
 

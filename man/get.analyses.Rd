@@ -5,37 +5,43 @@
 \title{get.analyses}
 \usage{
 get.analyses(studies = NA, analysis.type = NA, Nmin.raw = 30,
-  Nmin.cond = 15, subset = c("all", "WEIRD", "NON-WEIRD")[1],
-  onlineTables = TRUE, staticData = FALSE,
-  rootdir = normalizePath(paste0(find.package("manylabRs"), ifelse(staticData,
-  "/static_data", "/data"))), data.names = list(Slate1 = ifelse(staticData,
-  "ML2_Rawdata_S1_RData", "ML2.S1"), Slate2 = ifelse(staticData,
-  "ML2_Rawdata_S2_RData", "ML2.S2")), indir = list(RAW.DATA =
-  ifelse(staticData, "RAW.DATA.PRIVATE", ""), MASTERKEY = ifelse(onlineTables,
-  "", "MASTERKEY"), SOURCEINFO = ifelse(onlineTables, "", "SOURCEINFO")),
-  outdir = list(ROBJECTS = "ROBJECTS", RESULTS.RDS = "RESULTS.RDS"))
+  Nmin.cond = 15, subset = c("all", "WEIRD", "NONWEIRD")[1],
+  onlineTables = TRUE, staticData = TRUE, saveRdata = FALSE,
+  rootdir = normalizePath(paste0(find.package("manylabRs"))),
+  indir = list(RAW_DATA = ifelse(staticData, file.path(rootdir, "extdata",
+  "RAW_DATA"), ""), MASTERKEY = ifelse(onlineTables, "", file.path(rootdir,
+  "extdata", "KEYTABLES")), SOURCE_INFO = ifelse(onlineTables, "",
+  file.path(rootdir, "extdata", "KEYTABLES"))), outdir = list(R_OBJECTS =
+  ifelse(saveRdata, file.path(rootdir, "extdata", "R_OBJECTS"), ""), RDS_RESULTS
+  = ifelse(saveRdata, file.path(rootdir, "extdata", "RESULTS_RDS"), "")),
+  data.names = list(Slate1 = ifelse(staticData, file.path(rootdir, "extdata",
+  "RAW_DATA", "ML2_Rawdata_S1.RData"), "ML2_S1"), Slate2 = ifelse(staticData,
+  file.path(rootdir, "extdata", "RAW_DATA", "ML2_Rawdata_S2.RData"), "ML2_S2")))
 }
 \arguments{
-\item{studies}{Numeric vector with unique study IDs listed in the `masteRkey` table (default = all IDs).
-@param analysis.type An optional number indicating Global (1), Primary (2, default) or Secondary (3) analyses.}
+\item{studies}{Numeric vector with unique study IDs listed in the `masteRkey` table (default = all IDs).}
+
+\item{analysis.type}{An optional number indicating Global (1), Primary (2, default) or Secondary (3) analyses.}
 
 \item{Nmin.raw}{Minimum raw sample size allowed to be included in the analyses.}
 
 \item{Nmin.cond}{Minimum sample size per condition allowed to be included in the analyses.}
 
-\item{subset}{Can be "all","WEIRD" or "NON-WEIRD"}
+\item{subset}{Can be "all","WEIRD" or "NONWEIRD"}
 
 \item{onlineTables}{Download most recent online versions of \code{masteRkey} and \code{Source} information.}
 
 \item{staticData}{Use data from external directory (see argument \code{indir})}
 
-\item{rootdir}{which dir to look for data and files}
+\item{saveRdata}{Save data in `R` format. If `TRUE` a list object is expected with two fieldnames: `R_OBJECTS` and `RDS_RESULTS`, one for storing a seperate Robject for each analysis conducted, the other for storing a single data image containing the output returned by the function. An empty character vector will prevent saving any objects}
 
-\item{data.names}{names of the datafiles for slate 1 and slate 2 (change e.g. if you study a custom subsample)}
+\item{rootdir}{which dir to look for data and files}
 
 \item{indir}{List of directories to use for different files. Change if you have files in different locations, but keep the list structure!}
 
 \item{outdir}{List of directories to use for outputting different result files. Change if you want to save in a different location, but keep the list structure!}
+
+\item{data.names}{names of the datafiles for slate 1 and slate 2 (change e.g. if you study a custom subsample)}
 }
 \value{
 A list object with analysis results.
@@ -49,6 +55,7 @@ Run analyses for (selected) ML2 studies.
 \examples{
 # Get the data from analysis 1 [Huang.1] listed on the \\href{masteRkey spreadsheet}{https://docs.google.com/spreadsheets/d/1fqK3WHwFPMIjNVVvmxpMEjzUETftq_DmP5LzEhXxUHA/}
 
+library(dplyr)
 df <- get.analyses(studies = 1, analysis.type = 1)
 
 # 'raw' pre-filter dataset

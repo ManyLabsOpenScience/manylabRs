@@ -42,7 +42,7 @@ Function to download a file hosted on OSF. Modified from code originally written
 }
 \examples{
 #Get the RP:P data hosted on OSF.
-dfRPP <- get.OSFfile(code='https://osf.io/fgjvw/', dfCln=TRUE)$df
+\dontrun{dfRPP <- get.OSFfile(code='https://osf.io/fgjvw/', dfCln=TRUE)$df}
 }
 \seealso{
 Other "get." functions: \code{\link{get.GoogleSheet}},

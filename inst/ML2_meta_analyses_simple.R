@@ -5,20 +5,22 @@ source('/Users/Fred/Documents/GitHub/manylabRs/manylabRs/R/C-3PR_ASCII.R')
 init()
 
 dir.out <- "/Users/Fred/Dropbox/Manylabs2/Figures"
-dir.in  <- "~/Dropbox/Manylabs2/TestOutput/RESULTS.RDS/"
+dir.in  <- "~/Dropbox/Manylabs2/TestOutput/RESULTS_RDS/"
 outlist1 <- rio::import(paste0(dir.in,"Data_Figure.rds"))
 outlist2 <- rio::import(paste0(dir.in,"Data_Table.rds"))
 outlistG <- rio::import(paste0(dir.in,"Data_Global.rds"))
 
 
-unique(outlist1$source.Setting)
 outlist1$online <- NA
 outlist1$online[outlist1$source.Setting%in%c("In a classroom","In a lab")] <- "lab"
 outlist1$online[outlist1$source.Setting%in%c("Online (at home)")] <- "online"
 outlist1$online.f <- factor(outlist1$online)
 outlist1$source.country.f <- factor(outlist1$source.Country)
 
+
 ML2.key     <- get.GoogleSheet(data='ML2masteRkey')$df
+
+outlist1[grepl("Gati",unique(as.character(outlist1$analysis.name))),]
 
 
 rmaR0 <- rmaR1 <- rmaR2 <- dfol <- list()
@@ -29,7 +31,7 @@ for(an in unique(as.character(outlist1$analysis.name))){
   ID <- as.character(outlist1$analysis.name)%in%an
   d  <- outlist1[ID,]
 
-  if((nrow(d)>0) & !grepl("Graham|Inbar|Schwarz",an)){
+  if((nrow(d)>0) & !grepl("Inbar|Schwarz",an)){
     cnt<-cnt+1
 
     r   <- sum(ID)
@@ -37,7 +39,7 @@ for(an in unique(as.character(outlist1$analysis.name))){
       analysis.name = c(rep(an,r)),
       study.source  = as.character(d$study.source),
       study.slate   = c(d$study.slate),
-      source.WEIRD.f  = d$source.WEIRD.f,
+      source.WEIRD.f  = factor(d$source.Weird),
       source.online.f = d$online.f,
       source.country.f = d$source.country.f,
       stat.N        = c(d$stat.N),
@@ -116,7 +118,7 @@ get.MetaResults <- function(metaObj){
       H2.u = d$CI$random[4,3]%00%NA,
       # rho  = d$model$rho%00%NA,
       # ICC  = (d$model$sigma2[1]/sum(d$model$sigma2, na.rm = TRUE))%00%0,
-      console_out = paste(capture.output(print(summary(d))),collapse="\n"))
+      console_out = paste(capture.output(print(summary(d$model))),collapse="\n"))
   })
   return(out)
 }
@@ -128,10 +130,11 @@ mods1 <-  list(nomod_uni = rmaR0,
 
 outMeta_uni <- ldply(mods1,get.MetaResults)
 
-export(outMeta_uni,paste0(dir.out,"/meta_analysis_wide_160917.xlsx"))
+dir.out <- "/Users/Fred/Dropbox/Manylabs2/TestOutput/RESULTS_META"
+export(outMeta_uni,paste0(dir.out,"/meta_analysis_wide_",as.Date(now()),".xlsx"))
 
+pdf(paste0(dir.out,"/FunnelPerAnalysis_mod2_",as.Date(now()),"2.pdf"), paper="a4r")
 
-pdf(paste0(dir.out,"/FunnelPerAnalysis_mod2_16-09-2017.pdf"), paper="a4r")
 
 for(m in seq_along(dfol)){
 
@@ -161,3 +164,99 @@ dev.off()
 
 
 
+########################################################
+##### MANY LABS 2: META-ANALYSES INBAR AND SCHWARZ #####
+########################################################
+
+#rm(list=ls())
+
+################
+### PACKAGES ###
+################
+
+#install.packages(c("stringr", "metafor"))
+library(stringr)
+library(metafor)
+
+
+outdir <- "~/Dropbox/Manylabs2/TestOutput/RESULTS_META" # Set working directory to location where data is stored
+
+rmaR0 <- rmaR1 <- rmaR2  <- list()
+
+cnt=1
+
+##### Inbar #####
+dat_Inbar <- read.csv(file = "~/Dropbox/Manylabs2/TestOutput/RESULTS_ANALYSIS/all/Inbar.1a_study_primary_include_all.csv") # Load data
+
+### Extract Cohen's q
+#q <- as.numeric(str_extract_all(as.character(dat_Inbar$test.ConsoleOutput), "(?<=0\\) \n\\s{0,1})[-0-9.]+"))
+#q <- dat_Inbar$ESCI.cohensQ
+
+### Compute sampling variance Cohen's q
+vi <- 1/(dat_Inbar$stat.n1-3)+1/(dat_Inbar$stat.n2-3)
+
+### Recode source.Setting variable (Merge "In a lab" and "In a classroom" and discard
+# "Other (please indicate)")
+levels(dat_Inbar$source.Setting) <- list(online = c("Online (at home)"), lab = c("In a lab", "In a classroom"))
+
+### RE meta-analysis without moderators
+metR0 <- rma(yi = ESCI.cohensQ, vi = vi, slab = analysis.name, data = dat_Inbar)
+
+### RE meta-analysis with source.Weird as moderator
+metR1 <- rma(yi = ESCI.cohensQ, vi = vi, mods = ~source.Weird, slab = analysis.name, data = dat_Inbar)
+
+### RE meta-analysis with recoded source.Setting as moderator
+metR2 <- rma(yi = ESCI.cohensQ, vi = vi, mods = ~ source.Setting, slab = analysis.name, data = dat_Inbar)
+
+rmaR0[[cnt]] <- list(model=metR0, CI = confint(metR0))
+rmaR1[[cnt]] <- list(model=metR1, CI = confint(metR1))
+rmaR2[[cnt]] <- list(model=metR2, CI = confint(metR2))
+
+#
+# mods2 <-  list(nomod_uni = rmaR0,
+#                online_uni = rmaR1,
+#                weird_uni = rmaR2)
+#
+# outMeta_uni <- ldply(mods2,get.MetaResults)
+#
+# export(outMeta_uni,paste0(outdir,"/meta_analysisInbar_",as.Date(now()),".xlsx"))
+
+################################################################################
+
+##### Schwarz #####
+dat_Schwarz <- read.csv(file = "~/Dropbox/Manylabs2/TestOutput/RESULTS_ANALYSIS/all/Schwarz.1a_study_primary_include_all.csv") # Load data
+#rmaR0 <- rmaR1 <- rmaR2 <- dfol <- list()
+
+cnt <-2
+
+### Extract Cohen's q
+q <- as.numeric(str_extract_all(as.character(dat_Schwarz$test.ConsoleOutput), "(?<=0\\) \n\\s{0,1})[-0-9.]+"))
+
+### Compute sampling variance Cohen's q
+vi <- 1/(dat_Schwarz$stat.n1-3)+1/(dat_Schwarz$stat.n2-3)
+
+### Recode source.Setting variable (Merge "In a lab" and "In a classroom" and discard
+# "Other (please indicate)")
+levels(dat_Schwarz$source.Setting) <- list(online = c("Online (at home)"), lab = c("In a lab", "In a classroom"))
+
+### RE meta-analysis without moderators
+metR0 <- rma(yi = ESCI.cohensQ, vi = vi, slab = analysis.name, data = dat_Schwarz)
+
+### RE meta-analysis with source.Weird as moderator
+metR1 <- rma(yi = ESCI.cohensQ, vi = vi, mods = ~ source.Weird, slab = analysis.name, data = dat_Schwarz)
+
+### RE meta-analysis with recoded source.Setting as moderator
+metR2 <- rma(yi = ESCI.cohensQ, vi = vi, mods = ~ source.Setting, slab = analysis.name, data = dat_Schwarz)
+
+
+rmaR0[[cnt]] <- list(model=metR0, CI = confint(metR0))
+rmaR1[[cnt]] <- list(model=metR1, CI = confint(metR1))
+rmaR2[[cnt]] <- list(model=metR2, CI = confint(metR2))
+
+mods2<-  list(nomod_uni = rmaR0,
+               online_uni = rmaR1,
+               weird_uni = rmaR2)
+
+outMeta_uni <- ldply(mods2,get.MetaResults)
+
+export(outMeta_uni,paste0(outdir,"/meta_analysis_Q_",as.Date(now()),".xlsx"))

@@ -38,7 +38,8 @@ Imports:
     MBESS,
     metafor,
     RCurl,
-    openxlsx
+    openxlsx,
+    dplyr
 RoxygenNote: 6.0.1
 Suggests:
     knitr,

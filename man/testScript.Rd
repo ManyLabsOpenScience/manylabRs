@@ -18,3 +18,4 @@ testScript(studies, tp, saveCSVfile = NA, saveRDSfile = NA,
 \description{
 FOR TESTING PURPOSES
 }
+\keyword{internal}

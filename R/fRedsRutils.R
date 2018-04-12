@@ -521,8 +521,8 @@ any2any <- function(testInfo,
                     alternative   = "two", keepDirection = TRUE,
                     keepSign      = TRUE,
                     keepSignNames = c("r","l.r","u.r","fisher.z","l.z","u.z")){
-  # require(MBESS)
-  # require(compute.es)
+   require(MBESS)
+   require(compute.es)
   esType.cl <- NA
 
   ifelse(grepl("two",alternative),{alternative <<- "two"},{alternative <<- "one"})
@@ -674,7 +674,7 @@ any2any <- function(testInfo,
       id.l <- c("l.d","l.r", "l.z", "l.or", "l.lor")
       id.u <- c("u.d","u.r", "u.z", "u.or", "u.lor")
       id.e <- c("d", "r", "fisher.z", "OR", "lOR")
-      rNames <- names(res(r=1,var.r=.5, n=100, level=95,dig=5,verbose = FALSE))
+      rNames <- names(compute.es::res(r=1,var.r=.5, n=100, level=95,dig=5,verbose = FALSE))
       ncp[,rNames] <- esComp[[1]][,rNames]
       ncp$N.total <- N
       ncp$n.1 <- n1
@@ -823,9 +823,6 @@ get.ncpCI <- function(x, df1, df2, N, esType, CL=.95, keepSign = TRUE, keepDirec
 #' @param alpha Alpha evel for significance test
 #' @param alternative One of "greater", "less", "two.sided" (default)
 #'
-#'
-#'
-
 #' @export
 #'
 cor.test.fisherZ <- function(r1 = NULL,
@@ -1007,7 +1004,7 @@ print.htest.fisherz <- function(obj) {
 #' @export
 #'
 z.test <- function(x = 0, mu = 0, pi = NULL, N = 0, sigma = 1, proportion=FALSE, alternative = "two.sided"){
-  require(dplyr)
+  #require(dplyr)
   if(proportion){
     if(!is.null(pi)){
       if(all(dplyr::between(x,0,1),dplyr::between(pi,0,1))){
@@ -1296,7 +1293,7 @@ init <- function(){
   #source(paste0(srcDir,'fRedsRutils.R'))
 
   # Function inIT will load and -if necessary- install packages passed in a list (unIT will do the reverse operation).
-  in.IT(c("MBESS","reshape2","plyr","tidyverse","metafor","RCurl","xlsx","broom","httr","compute.es","downloader","car", "lme4", "lmerTest","exact2x2","ggplot2","gplots","gridExtra","lattice","latticeExtra","rio","scales","lubridate"))
+  in.IT(c("MBESS","reshape2","plyr","tidyverse","metafor","RCurl","openxlsx","broom","httr","compute.es","downloader","car", "lme4", "lmerTest","exact2x2","ggplot2","gplots","gridExtra","lattice","latticeExtra","rio","scales","lubridate"))
 
 }
 
@@ -1356,9 +1353,9 @@ disp <- function(message='Hello world!', header = "disp", footer = TRUE){
 
 
 
-#' scaleR
+#' Elastic Scaler - A Flexible Rescale Function
 #'
-#' @description Rescale a vector to a user defined range defined by user.
+#' @description The 'elastic scaler'will rescale numeric vectors (1D, or columns in a matrix or data.frame) to a user defined minimum and maximum, either based on the extrema in the data, or, a minimum and maximum defined by the user.
 #'
 #' @param x     Input vector or data frame.
 #' @param mn     Minimum value of original, defaults to \code{min(x, na.rm = TRUE)}.
@@ -1369,42 +1366,49 @@ disp <- function(message='Hello world!', header = "disp", footer = TRUE){
 #'
 #' @details Three uses:
 #' \enumerate{
-#' \item scaleR(x)             - Scale x to data range: min(x.out)==0;      max(x.out)==1
-#' \item scaleR(x,mn,mx)       - Scale x to arg. range: min(x.out)==mn==0;  max(x.out)==mx==1
-#' \item scaleR(x,mn,mx,lo,hi) - Scale x to arg. range: min(x.out)==mn==lo; max(x.out)==mx==hi
+#' \item elascer(x)             - Scale x to data range: min(x.out)==0;      max(x.out)==1
+#' \item elascer(x,mn,mx)       - Scale x to arg. range: min(x.out)==mn==0;  max(x.out)==mx==1
+#' \item elascer(x,mn,mx,lo,hi) - Scale x to arg. range: min(x.out)==mn==lo; max(x.out)==mx==hi
 #' }
 #'
-#' @author Fred Hasselman
+#' @return scaled inout
+#' @export
 #'
 #' @examples
 #' # Works on numeric objects
 #' somenumbers <- cbind(c(-5,100,sqrt(2)),c(exp(1),0,-pi))
 #'
-#' scaleR(somenumbers)
-#' scaleR(somenumbers,mn=-100)
+#' elascer(somenumbers)
+#' elascer(somenumbers,mn=-100)
 #
 #' # Values < mn will return < lo (default=0)
 #' # Values > mx will return > hi (default=1)
-#' scaleR(somenumbers,mn=-1,mx=99)
+#' elascer(somenumbers,mn=-1,mx=99)
 #'
-#' scaleR(somenumbers,lo=-1,hi=1)
-#' scaleR(somenumbers,mn=-10,mx=101,lo=-1,hi=4)
-scaleR <- function(x,mn=min(x,na.rm=T),mx=max(x,na.rm=T),lo=0,hi=1){
+#' elascer(somenumbers,lo=-1,hi=1)
+#' elascer(somenumbers,mn=-10,mx=101,lo=-1,hi=4)
+elascer <- function(x,mn=min(x,na.rm=T),mx=max(x,na.rm=T),lo=0,hi=1){
+  UNLIST = FALSE
+  if(!is.data.frame(x)){UNLIST=TRUE}
   x <- as.data.frame(x)
   u <- x
-  for(i in 1:dim(x)[2]){
+  for(i in 1:NCOL(x)){
     mn=min(x[,i],na.rm=T)
     mx=max(x[,i],na.rm=T)
-    if(mn>=mx){warning("Minimum (mn) >= maximum (mx).")}
-    if(lo>=hi){warning("Lowest scale value (lo) >= highest scale value (hi).")}
+    if(mn>mx){warning("Minimum (mn) >= maximum (mx).")}
+    if(lo>hi){warning("Lowest scale value (lo) >= highest scale value (hi).")}
     ifelse(mn==mx,{u[,i]<-rep(mx,length(x[,i]))},{
       u[,i]<-(((x[i]-mn)*(hi-lo))/(mx-mn))+lo
-      id<-complete.cases(u[,i])
+      id<-stats::complete.cases(u[,i])
       u[!id,i]<-0
     })
   }
+  if(UNLIST){
+    u <- as.numeric(u[,1])
+  }
   return(u)
 }
+
 
 center <- function(numvec, na.rm=TRUE, type = c("mean","median")[1]){
   switch(type,
@@ -1421,7 +1425,7 @@ normalise <- function(numvec, na.rm=TRUE){
 # Help lme4 get a better convergence
 nlopt <- function(par, fn, lower, upper, control) {
   # Add to call: control = lmerControl(optimizer = "nloptwrap", calc.derivs = FALSE
-  .nloptr <<- res <- nloptr(par, fn, lb = lower, ub = upper,
+  .nloptr <<- res <- nloptr::nloptr(par, fn, lb = lower, ub = upper,
                             opts = list(algorithm = "NLOPT_LN_BOBYQA", print_level = 1,
                                         maxeval = 1000, xtol_abs = 1e-6, ftol_abs = 1e-6))
   list(par = res$solution,
@@ -1451,7 +1455,7 @@ nmissing <- function(x){
 ##   conf.interval: the percent range of the confidence interval (default is 95%)
 summarySE <- function(data = NULL, measurevar, groupvars=NULL, na.rm=FALSE,
                       conf.interval = .95, .drop=TRUE) {
-  library(plyr)
+  #library(plyr)
 
   # New version of length which can handle NA's: if na.rm==T, don't count them
   length2 <- function (x, na.rm=na.rm) {
@@ -1461,7 +1465,7 @@ summarySE <- function(data = NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 
   # This does the summary. For each group's data frame, return a vector with
   # N, mean, and sd
-  datac <- ddply(data, groupvars, .drop=.drop,
+  datac <- plyr::ddply(data, groupvars, .drop=.drop,
                  .fun = function(xx, col) {
                    c(N    = length2(xx[[col]], na.rm=na.rm),
                      mean = mean   (xx[[col]], na.rm=na.rm),

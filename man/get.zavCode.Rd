@@ -7,7 +7,7 @@
 get.zavCode(df = NULL, lookup = NULL)
 }
 \arguments{
-\item{df}{Dataset: ML2.S2}
+\item{df}{Dataset: ML2_S2}
 
 \item{lookup}{The lookup table}
 }
