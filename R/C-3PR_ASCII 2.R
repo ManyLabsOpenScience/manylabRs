@@ -501,18 +501,11 @@ get.oriESCI <- function(CL=.95){
 
   savani.ori   <- as.table(matrix(c(60,45,68,45),nrow = 2, ncol = 2, dimnames = list(c("Indians", "Americans"), c("Personal","Interpersonal"))))
 
-  norenzayan1.ori <- as.table(matrix(c(483,262,217,118),nrow = 2, ncol = 2, dimnames = list(c("Belong", "Similar"), c("Rule","Familiarity"))))
-  norenzayan2.ori <- as.table(matrix(c(504,156,216,224),nrow = 2, ncol = 2, dimnames = list(c("Belong", "Similar"), c("Rule","Familiarity"))))
-
-
 
   # Load Key Table
-
   ML2.ori <- get.GoogleSheet(data='ML2masteRkey')$df
-  ID.ori  <- which(nchar(ML2.ori$orig.stat.type)>0&ML2.ori$ori.study.figure2.include==1)
+  ID.ori  <- which(nchar(ML2.ori$orig.stat.type)>0)
   out     <- list()
-
-  ML2.ori$study.analysis.ori <- NA
 
   cnt <- 0
 
@@ -524,8 +517,8 @@ get.oriESCI <- function(CL=.95){
                        estimate  = NA,
                        estimate1 = NA,
                        estimate2 = NA, alternative=NA,
-                       parameter = NA, parameter1=NA, parameter2=NA,
-                       conf.low  = NA, conf.high=NA,method=NA)
+                       parameter=NA, parameter1=NA, parameter2=NA,
+                       conf.low=NA, conf.high=NA,method=NA)
 
     cnt<-cnt+1
 
@@ -564,80 +557,18 @@ get.oriESCI <- function(CL=.95){
       test$parameter <- NA
     }
 
-    if(grepl("Norenzayan.1",study.analysis)){
-      var.lor    <- sum(1/(norenzayan1.ori))
-      stat.test  <- exact2x2::fisher.exact(norenzayan1.ori)
-      test <- broom::tidy(stat.test)
-      #colnames(test)[1] <- "statistic"
-      test$parameter <- NA
-    }
-    if(grepl("Norenzayan.2",study.analysis)){
-      var.lor    <- sum(1/(norenzayan2.ori))
-      stat.test  <- exact2x2::fisher.exact(norenzayan2.ori)
-      test <- broom::tidy(stat.test)
-      #colnames(test)[1] <- "statistic"
-      test$parameter <- NA
-    }
-
     if(esType=="Z.f"){
-
-      stat.test <- cor_test_fisherZ(r1 =ML2.ori$orig.stat.estimate1[[s]],
+      stat.test <- cor_test_fisherZ(r1=ML2.ori$orig.stat.estimate1[[s]],
                                     r2= ML2.ori$orig.stat.estimate2[[s]],
                                     n1=n1,
-                                    n2=n2,
-                                    Cohens.q = TRUE)
-
-      if(stat.test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
-
-        # Wilcox.out<- twopcor(x1=vars$r1[[1]],
-        #                      x2=vars$r1[[2]],
-        #                      y1=vars$r2[[1]],
-        #                      y2=vars$r2[[2]])
-
-        test$fZ.ncp       <- stat.test$statistic
-        test$fZ.ncp.lo    <- "fisherZ - 2 corr"
-        test$fZ.ncp.hi    <- "fisherZ - 2 corr"
-        test$fZ.cohensQ   <- stat.test$effect.size
-        test$fZ.cohensQ.l <- stat.test$effect.size.ci[1]
-        test$fZ.cohensQ.u <- stat.test$effect.size.ci[2]
-        test$fZ.bootR1    <- NA
-        test$fZ.bootR2    <- NA
-        test$fZ.bootCI.l  <- NA
-        test$fZ.bootCI.u  <- NA
-        test$fZ.r         <- NA
-        test$fZ.l.r       <- NA
-        test$fZ.u.r       <- NA
-      } else {
-        test$fZ.ncp       <- stat.test$statistic
-        test$fZ.ncp.lo    <- "fisherZ - 1 corr"
-        test$fZ.ncp.hi    <- "fisherZ - 1 corr"
-        test$fZ.cohensQ   <- stat.test$effect.size
-        test$fZ.cohensQ.l <- stat.test$effect.size.ci[1]
-        test$fZ.cohensQ.u <- stat.test$effect.size.ci[2]
-      }
-
-      if(all(c("htest","fisherZ")%in%class(stat.test))){
-        tmp <- unclass(stat.test)
-        stat.test <- tmp[1:8]
-        stat.test$estimate <- tanh(tmp$effect.size[[1]])
-        stat.test$conf.int <- c(tanh(tmp$effect.size.ci[[1]]),tanh(tmp$effect.size.ci[[2]]))
-        #attr(stat.test$conf.int,"conf.level")
-        class(stat.test) <- "htest"
-      }
-      test$method <- stat.test$method
-
-    #  tst <- get.descriptives(stat.test = stat.test,keytable = ML2.ori[s,],vars = vars,testOnly = TRUE)
-#
-#       tmp <- unclass(stat.test)
-#       stat.test <- tmp[1:8]
-#       test$estimate <- test$statistic <- tanh(tmp$effect.size[[1]])
-#       test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
-#       test$conf.high <- tanh(tmp$effect.size.ci[[2]])
-#       test$method <- stat.test$method
-#       test<-stat.test
-#       class(stat.test) <- "htest"
-
-
+                                    n2=n2)
+      tmp <- unclass(stat.test)
+      stat.test <- tmp[1:8]
+      test$estimate <- test$statistic <- tanh(tmp$effect.size[[1]])
+      test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
+      test$conf.high <- tanh(tmp$effect.size.ci[[2]])
+      testt$method <- stat.test$method
+      #class(stat.test) <- "htest"
     }
 
     if(esType=="t.r"){
@@ -650,9 +581,9 @@ get.oriESCI <- function(CL=.95){
       test$estimate <- tanh(tmp$effect.size[[1]])
       test$statistic <- test$estimate * sqrt((N-2)/(1-test$estimate^2))
       df1 <- N-2
-       test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
-       test$conf.high <- tanh(tmp$effect.size.ci[[2]])
-      class(stat.test) <- "htest"
+      # test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
+      # test$conf.high <- tanh(tmp$effect.size.ci[[2]])
+      #class(stat.test) <- "htest"
 
     }
 
@@ -662,6 +593,7 @@ get.oriESCI <- function(CL=.95){
     } else {
       test$parameter1 <- df1
     }
+
 
 
     if(!(cnt%in%skip)){
@@ -675,10 +607,10 @@ get.oriESCI <- function(CL=.95){
                                   df2       = df2,
                                   N         = N,
                                   n1        = n1,
-                                  n2        = n2,
+                                  n2        = n1,
                                   esType    = esType,
                                   var.lor   = var.lor,
-                                  CL        = CL,
+                                  CL        = .95,
                                   keepSign    = TRUE,
                                   alternative = ifelse(is.null(test$alternative),
                                                        ML2.ori$stat.params[[4]],
@@ -701,6 +633,7 @@ get.oriESCI <- function(CL=.95){
       es.id <- 1
     }
 
+
     # Add columns for correlation comparison ES
     ESCI$cohensQ   <- NA
     ESCI$cohensQ.l <- NA
@@ -711,6 +644,7 @@ get.oriESCI <- function(CL=.95){
     ESCI$bootCI.u  <- NA
 
     if(esType=="Z.f"){
+
       if(stat.test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
         ID <- grep("d",colnames(ESCI))[1]
         if(!is.na(ID)%00%NA){ESCI[,ID:NCOL(ESCI)] <- NA}
@@ -722,7 +656,6 @@ get.oriESCI <- function(CL=.95){
         ESCI$l.r       <- test$fZ.l.r
         ESCI$u.r       <- test$fZ.u.r
       }
-
       ESCI$ncp       <- test$fZ.statistic
       ESCI$ncp.lo    <- test$fZ.ncp.lo
       ESCI$ncp.hi    <- test$fZ.ncp.hi
@@ -730,6 +663,7 @@ get.oriESCI <- function(CL=.95){
       ESCI$cohensQ.l <- test$fZ.cohensQ.l
       ESCI$cohensQ.u <- test$fZ.cohensQ.u
     }
+
 
 
     ML2.ori$orig.stat.ncp[s]     <- ESCI$ncp%00%NA
@@ -742,30 +676,13 @@ get.oriESCI <- function(CL=.95){
     ML2.ori$orig.ES.r[s]         <- ESCI$r%00%NA
     ML2.ori$orig.ES.r.ciL[s]     <- ESCI$l.r%00%NA
     ML2.ori$orig.ES.r.ciU[s]     <- ESCI$u.r%00%NA
-    ML2.ori$orig.ES.cohensQ[s]     <- ESCI$cohensQ
-    ML2.ori$orig.ES.cohensQ.ciU[s] <- ESCI$cohensQ.u
-    ML2.ori$orig.ES.cohensQ.ciL[s] <- ESCI$cohensQ.l
 
-
-    study.analysis <- paste0(ML2.ori$study.id[[s]],".",ML2.ori$study.name[[s]],".WEIRD")
-
-    if(ML2.ori$study.analysis[[s]]=="Norenzayan.2"){study.analysis<- paste0(ML2.ori$study.id[[s]],".Norenzayan.NONWEIRD")}
-    if(ML2.ori$study.analysis[[s]]=="Norenzayan.1"){study.analysis<-paste0(ML2.ori$study.id[[s]],".Norenzayan.WEIRD")}
-    if(ML2.ori$study.analysis[[s]]=="Miyamoto.1"){study.analysis<-paste0(ML2.ori$study.id[[s]],".Miyamoto.WEIRD")}
-    if(ML2.ori$study.analysis[[s]]=="Miyamoto.3"){study.analysis<-paste0(ML2.ori$study.id[[s]],".Miyamoto.NONWEIRD")}
-    if(ML2.ori$study.analysis[[s]]=="Huang.3"){study.analysis<-paste0(ML2.ori$study.id[[s]],".Huang.WEIRD")}
-    if(ML2.ori$study.analysis[[s]]=="Huang.4"){study.analysis<-paste0(ML2.ori$study.id[[s]],".Huang.NONWEIRD")}
-    if(ML2.ori$study.analysis[[s]]=="Savani.2a"){study.analysis<-paste0(ML2.ori$study.id[[s]],".Savani.WEIRD")}
-    if(ML2.ori$study.analysis[[s]]=="Savani.2b"){study.analysis<-paste0(ML2.ori$study.id[[s]],".Savani.NONWEIRD")}
-
-    ML2.ori$study.analysis.ori[[s]] <- study.analysis
 
     out[[cnt]] <- data.frame(
       study.id      = study.id,
       study.slate   = study.slate,
       study.name    = study.name,
-      study.analysis    = ML2.ori$study.analysis[[s]],
-      study.analysis.ori=study.analysis,
+      study.analysis=study.analysis,
       testInfo  = test[1:2],
       df1 = df1,
       df2 = df2,
@@ -964,6 +881,7 @@ get.analyses <- function(studies       = NA,
       cat("\n")
 
       # START GROUPS ----------------------------------------------
+
 
       for(g in seq_along(runGroups)){
 
@@ -1286,28 +1204,6 @@ get.analyses <- function(studies       = NA,
   ) #), descriptivesDump = ML2.descriptivesDump))
 }
 
-df.Clean <- function(df,Sep="."){
-  #  require(dplyr)
-  nms.ori   <- colnames(df)
-  rws.ori   <- rownames(df)
-
-  # Change punctuation and blankss in variable names to points
-  nmsP  <- gsub("([[:punct:]]|[[:blank:]])+","+",nms.ori)
-  nmsPP <- gsub("(^[+]|[+]$)+","",nmsP)
-  nmsPP <- gsub("[+]",Sep,nmsPP)
-  # Check for double names
-  ifelse(length(unique(nmsPP))==length(nmsPP),{nms <- nmsPP},{
-    id2 <- which(plyr::laply(nmsPP,function(n) sum(nmsPP%in%n))>1)
-    nms <- nmsPP
-    nms[id2] <- paste(nmsPP[id2],id2,sep=".")})
-
-  colnames(df) <- nms
-  df      <- dplyr::select(df,which(nms%in%nms[nms!=""]))
-  return(list(df=df,
-              nms=nms.ori,
-              rws=rws.ori)
-  )
-}
 
 #' get.GoogleSheet
 #'
@@ -1356,6 +1252,29 @@ get.GoogleSheet <- function(url=NULL,data=c('ML1data','ML2masteRkey','ML2data')[
               info = list(Info=info,
                           GoogleSheet.colnames=dplyr::tbl_df(data.frame(ori.colnames=df$nms)),
                           GoogleSheet.rownames=dplyr::tbl_df(data.frame(ori.rownames=df$rws))))
+  )
+}
+
+df.Clean <- function(df,Sep="."){
+  #  require(dplyr)
+  nms.ori   <- colnames(df)
+  rws.ori   <- rownames(df)
+
+  # Change punctuation and blankss in variable names to points
+  nmsP  <- gsub("([[:punct:]]|[[:blank:]])+","+",nms.ori)
+  nmsPP <- gsub("(^[+]|[+]$)+","",nmsP)
+  nmsPP <- gsub("[+]",Sep,nmsPP)
+  # Check for double names
+  ifelse(length(unique(nmsPP))==length(nmsPP),{nms <- nmsPP},{
+    id2 <- which(plyr::laply(nmsPP,function(n) sum(nmsPP%in%n))>1)
+    nms <- nmsPP
+    nms[id2] <- paste(nmsPP[id2],id2,sep=".")})
+
+  colnames(df) <- nms
+  df      <- dplyr::select(df,which(nms%in%nms[nms!=""]))
+  return(list(df=df,
+              nms=nms.ori,
+              rws=rws.ori)
   )
 }
 
@@ -1459,8 +1378,12 @@ get.OSFfile <- function(code, dir = tempdir(), scanMethod, downloadMethod = c("h
 #'
 #'
 #' @export
-get.CSVdata <- function(path, fID, finishedOnly=TRUE){
-  files <- paste0(path,"/",fID)
+get.CSVdata <- function(path = NA, fID, finishedOnly=TRUE){
+  if(!is.na(path)){
+  files <- file.path(path,fID)
+  } else {
+    files <- fID
+  }
 
   if(grepl(".xlsx",files)){
     temp <- rio::import(files, sheet=1, format = "xlsx", setclass = "tbl_df")
@@ -1615,16 +1538,15 @@ get.zavCode <- function(df = NULL, lookup = NULL){
 #'
 #' @export
 #'
-get.descriptives <- function(stat.test, vars=NA, keytable, testOnly = FALSE){
+get.descriptives <- function(stat.test, vars, keytable){
 
-  tidy.stat.test <- stat.test
-  if("htest.fisherZ"%in%class(tidy.stat.test)){
-    tmp <- unclass(tidy.stat.test)
-    tidy.stat.test <- tmp[1:8]
-    tidy.stat.test$estimate <- tanh(tmp$effect.size[[1]])
-    tidy.stat.test$conf.int <- c(tanh(tmp$effect.size.ci[[1]]),tanh(tmp$effect.size.ci[[2]]))
-    class(tidy.stat.test) <- "htest"
+  if(all(c("htest","fisherZ")%in%class(stat.test))){
+    tmp <- unclass(stat.test)
+    stat.test <- tmp[1:8]
+    stat.test$estimate <- tanh(tmp$effect.size[[1]])
+    stat.test$conf.int <- c(tanh(tmp$effect.size.ci[[1]]),tanh(tmp$effect.size.ci[[2]]))
     #attr(stat.test$conf.int,"conf.level")
+    class(stat.test) <- "htest"
   }
 
   # if(grepl("lm",esType)){
@@ -1634,18 +1556,16 @@ get.descriptives <- function(stat.test, vars=NA, keytable, testOnly = FALSE){
   esType <- gsub("lm[.]","",keytable$stat.type)
 
 
-   if(!testOnly){
-  # Descriptive structures ---------------------
-
+  # Descriptive structures ------------------------------------------------------------------------------------------
   N <- vars$N
   vars$N <- NULL
 
   if(any(names(vars) == "df")){vars$df <- NULL}
 
-  if(any(names(tidy.stat.test) == "method")){
-    method = tidy.stat.test$method
+  if(any(names(stat.test) == "method")){
+    method = stat.test$method
   } else {
-    method <- class(tidy.stat.test)[1]
+    method <- class(stat.test)[1]
   }
 
   if(any(plyr::laply(vars,is.factor))){
@@ -1690,37 +1610,15 @@ get.descriptives <- function(stat.test, vars=NA, keytable, testOnly = FALSE){
 
     colnames(descr.sum)[colnames(descr.sum)==".id"] <- "name"
 
-    #tmpvars <- vars[lengths(vars)>1]
     descr.raw  <- plyr::ldply(vars, function(ignore){
-      #if(is.list(ignore)){ignore<-unlist(ignore)}
+      #if(is.list(gd)){gd<-unlist(gd)}
       if(!is.data.frame(ignore)){ignore <- data.frame(ignore)}
-      if(NCOL(ignore)==1){
-        cname <- colnames(ignore)
-        ignore <- data.frame(ignore,NA)
-        colnames(ignore) <- c(cname,"remove")
-      }
-      out <- broom::tidy(ignore)
-      out <- filter(out,column != "remove")
-      return(out)
-        })
+      return(broom::tidy(ignore))})
 
     colnames(descr.raw)[colnames(descr.raw)==".id"] <- "name"
-    if(any(descr.raw$n==1)&esType=="t.p"){descr.raw$n[descr.raw$n==1]<-N}
+  }
 
-    #colnames(descr.raw)[colnames(descr.raw)=="column"] <- "name"
-
-#     if(esType=="t.p"){
-#     descr.raw$n <- N
- }
-    #
-    #   descr.raw <- summary(descr.raw$x)
-    #   descr.raw <- as.data.frame(unlist(descr.raw))
-    #   descr.raw$n <- N
-    # }
-
-  } #testonly
-
-  # Test structure --------------------
+  # Test structure --------------------------------------------------------------------------------------------------
 
   if(esType=="f"|grepl("lm",keytable$stat.type)){
 
@@ -1737,7 +1635,7 @@ get.descriptives <- function(stat.test, vars=NA, keytable, testOnly = FALSE){
 
   } else {
 
-    suppressMessages(test <- broom::tidy(tidy.stat.test))
+    suppressMessages(test <- broom::tidy(stat.test))
 
     if(esType=="OR"){
       test$parameter <- NA
@@ -1785,7 +1683,7 @@ get.descriptives <- function(stat.test, vars=NA, keytable, testOnly = FALSE){
 
   return(list(descr.raw = descr.raw,
               descr.sum = descr.sum,
-              test      = test)[c(!testOnly,!testOnly,TRUE)]
+              test      = test)
   )
 }
 
@@ -1872,7 +1770,6 @@ get.output <- function(key, vars, descr, group, analysis, varEqual, test, ESCI, 
 
   clean_out <- OutputTemplate()
 
-  colnames(output)<-gsub("test.fZ","test",colnames(output))
   names_both <- colnames(clean_out)[colnames(clean_out)%in%colnames(output)]
 
   clean_out[,names_both] <- output[,names_both]
@@ -2049,8 +1946,7 @@ l_ply(seq_along(dfout$aggregated),
 generateOutput <-  function(describe = describe,
                             var.lor  = NA,
                             runningGroup = "None",
-                            runningAnalysis = "None",
-                            stat.test = stat.test){
+                            runningAnalysis = "None"){
 
   ESCI <- list(value = NULL,
                warning = "init")
@@ -2058,9 +1954,6 @@ generateOutput <-  function(describe = describe,
   test  = describe$test
   descr = describe$descr.raw
 
-  if(test$estype=="t.p"){
-    Nv <- c(descr$n[1],NA) #as.numeric(NROW(descr))
-  } else {
   if(grepl("OR",test$estype, fixed = TRUE)){
     Nv <- c(descr$n[1],descr$n[3])
   } else {
@@ -2069,7 +1962,6 @@ generateOutput <-  function(describe = describe,
     } else {
       Nv <- c(descr$n[1]+descr$n[3],descr$n[2]+descr$n[4])
     }
-  }
   }
 
 if(is.null(test$method)){
@@ -2103,13 +1995,8 @@ if(is.null(test$method)){
     ESCI  <- ESCI$value
     es.id <- which(colnames(ESCI)%in%"r")
   } else {
-    if(is.data.frame(ESCI$value)){
-      ESCI  <- ESCI$value
-      es.id <- which(colnames(ESCI)%in%"r")
-    } else {
     ESCI  <- test
     es.id <- 1
-    }
   }
 
   ifelse(is.na(ESCI[es.id]),
@@ -2147,8 +2034,6 @@ if(is.null(test$method)){
 
   if(test$estype=="Z.f"){
 
-
-
     if(test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
       ID <- grep("d",colnames(ESCI))[1]
       if(!is.na(ID)%00%NA){ESCI[,ID:NCOL(ESCI)] <- NA}
@@ -2160,7 +2045,6 @@ if(is.null(test$method)){
       ESCI$l.r       <- test$fZ.l.r
       ESCI$u.r       <- test$fZ.u.r
     }
-
     ESCI$ncp       <- test$fZ.statistic
     ESCI$ncp.lo    <- test$fZ.ncp.lo
     ESCI$ncp.hi    <- test$fZ.ncp.hi
@@ -2366,222 +2250,7 @@ vioQtile <- function(gg=NULL,qtiles=NULL,probs=seq(0,1,.25),labels=paste(probs[-
 }
 
 
-
-splitViolinPlot <- function(data      = NULL,
-                            distVar   = NA,
-                            groupVar  = NA,
-                            colorVar  = NA,
-                            labelVar  = NA,
-                            splitVar  = NA,
-                            sortVar   = NA,
-                            referenceVar      = NA,
-                            splitReferenceVar = NA,
-                            addMedian = TRUE,
-                            addLegend = TRUE,
-                            xlab      = ""){
-
-  data <- df
-
-  distVar <- "ESCI.r"
-  groupVar <- "study.labels"
-  labelVar <- "study.labels"
-  splitVar <- "source.WEIRD.f"
-  colorVar <- "source.WEIRD.f"
-  sortVar      <- "GlobalES.r"
-  referenceVar <- "orig.ES.r"
-  splitReferenceVar <- "ori.WEIRD.f"
-
-  colNames <- list(distVar   = distVar,
-               groupVar  = groupVar,
-               colorVar  = colorVar,
-               labelVar  = labelVar,
-               splitVar  = splitVar,
-               sortVar   = sortVar,
-               referenceVar      = referenceVar,
-               splitReferenceVar = splitReferenceVar)
-
- colNames%>>%cl%ci%data
-
- which.names(data,colNames[1])
-
-  if(!is.na(sortVar)){
-  da <- data %>% group_by(.[[groupVar]]) %>% mutate(meanES = mean(.[[distVar]], na.rm=TRUE),
-                                                    medianES = median(.[[distVar]], na.rm=TRUE))
-  }
-range(da$meanES)
-  #sourceInfo <- get.GoogleSheet(url="https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/export?format=csv")$df
-
-  # if(is.null(oriES)&addOriES){
-  #  oriES <- import("/Users/Fred/Dropbox/Manylabs2/TestOutput/ORI.EFFECTS/ML2_ori_effects_MasterKey.xlsx")
-  # }
-
-  if(!is.null(oriES)){addOriES=FALSE}
-  if(addOriES){
-    # Load Key Table
-    oriES   <- get.GoogleSheet(data='ML2masteRkey')$df
-    ID.ori  <- which(nchar(oriES$orig.ES.r)>0)
-    ID.add  <- which(oriES$study.figure2.include==1)
-    Analyses.ori <- sort(oriES$study.analysis[ID.ori])
-    Analyses.add <- sort(oriES$study.analysis[ID.add])
-    # dft<- data.frame(includeFig2=Analyses.add)
-    # dft$oriEffect <-NA
-    # dft$oriEffect[Analyses.add%in%Analyses.ori] <- Analyses.ori[Analyses.ori%in%Analyses.add]
-    # rest<-Analyses.ori[!(Analyses.ori%in%Analyses.add)]
-    # dft[(nrow(dft)+1):(nrow(dft)+length(rest)),1:2] <- cbind(rep(NA,length(rest)),rest)
-  }
-
-
-  df$slabel <- df$study.id
-
-  # if(!anonymous){
-  #     l_ply(seq_along(oriES$study.analysis), function(l) df$slabel[tolower(as.character(df$.id))==oriES$study.analysis[l]] <<- oriES$description[l])
-  #     df$slabel <- factor(df$slabel)
-  # } else {
-  #     l_ply(seq_along(oriES$study.analysis), function(l) df$slabel[tolower(as.character(df$.id))==oriES$study.analysis[l]] <<- l)
-  #     df$slabel <- factor(df$slabel)
-  # }
-
-  df$.id    <- factor(df$.id)
-  btype     <- "swarm"
-  pdf(tempfile())
-  bs    <- beeswarm(ESCI.r ~ slabel, data = df,
-                    horizontal = FALSE, corral = "none",
-                    corralWidth = 5,
-                    pch = 21, spacing = 2, cex = .5,
-                    priority = "ascending", method = btype, do.plot = TRUE)[, c(1, 2, 4, 6)]
-  dev.off()
-
-  colnames(bs)[4] <- "labels"
-
-  df <- data.frame(df,bs)
-  se <- function(x){sqrt(var(x,na.rm=TRUE)/length(na.omit(x)))}
-
-  df$meanES <- plyr::ldply(unique(df$labels),
-                           function(r) cbind(rep(mean(df$y[df$labels==r], na.rm = TRUE),
-                                                 sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
-  df$seES <- plyr::ldply(unique(df$labels),
-                         function(r) cbind(rep(se(df$y[df$labels==r]),
-                                               sum(df$labels==r, na.rm = TRUE) ) ))[ ,1]
-
-  df <- arrange(df, meanES)
-
-  df$xx <- plyr::ldply(unique(df$labels),
-                       function(r) cbind(scale(df$x[df$labels==r], scale = F)))[,1]
-  df$xf <- plyr::ldply(seq_along(unique(df$labels)),
-                       function(r) cbind(df$xx[df$labels==unique(df$labels)[r]] +
-                                           seq(10,10*length(unique(df$labels)), by=10)[r]))[,1]
-  df$xn <- plyr::ldply(seq_along(unique(df$labels)),
-                       function(r) cbind(rep(seq(10,10*length(unique(df$labels)),by=10)[r],
-                                             sum(df$labels==unique(df$labels)[r]))))[,1]
-
-  keylabs <- c("Mean of sample ES","ES of grand mean","Original ES")[c(addMedian,addGlobalES,addOriES)]
-  mrkrs  <- c(22,21,23)[c(addMedian,addGlobalES,addOriES)]
-
-  mxN       <- max(df$ESCI.N.total)
-
-  #Colorblindsafe colors
-  cwhite = "#f7f7f7"
-  ccream = "#2166ac"
-  cblank = "#d1e5f0"
-  corange = "#f4a582"
-  cblue  = "#2166ac"
-  cred   = "#b2182b"
-  cpurp  = "#b2abd2"
-
-  mypalette <- c(cred,cblue)
-
-  df$sigf <- NA
-  df$sigf[df$test.p.value> .05] <- "Not Significant"
-  df$sigf[df$test.p.value<=.05] <- "Significant"
-  df$sigf <- factor(df$sigf)
-
-  # df$Country <- "No Country"
-  # l_ply(seq_along(df$.id), function(l) df$Country[l] <<- sourceInfo$Country[sourceInfo$Source.Global==df$study.source[l]])
-
-  df$USA                    <- "Non-USA"
-  df$USA[df$source.Country=="USA"] <- "USA"
-
-  df$USA <- factor(df$USA)
-
-  df <- df[df$ESCI.N.total>=30,]
-
-  dfG <- dplyr::summarise(group_by(df,.id),
-                          y= mean(ESCI.r,na.rm = T),
-                          ymin=mean(ESCI.l.r, na.rm = T),
-                          ymax=mean(ESCI.u.r, na.rm = T))
-
-  dfG   <- arrange(dfG, y)
-  dfG$x <- seq(10,10*nrow(dfG),by=10)
-
-  dfGlobal <- dplyr::summarise(group_by(df,.id),
-                               y= max(GlobalES,na.rm = TRUE),
-                               ymin=max(GlobalESlo, na.rm = TRUE),
-                               ymax=max(GlobalEShi, na.rm = TRUE))
-  dfGlobal   <- arrange(dfGlobal, y)
-  dfGlobal$x <- seq(10,10*nrow(dfGlobal),by=10)
-
-  if(addOriES){
-    oriES      <- oriES[ID.ori,]
-    oriES$mES <- plyr::laply(na.exclude(oriES$study.analysis), function(s) dfG$y[tolower(dfG$.id)%in%tolower(s)])
-    oriES     <- dplyr::arrange(oriES, mES)
-    oriES$x   <- seq(10,10*nrow(oriES),by=10)
-  }
-  df$fillvar<- df[,fillvar]
-
-  g <-ggplot(df, aes(x=xf, y=y)) +
-    geom_vline(xintercept = unique(df$xn), colour = "grey80",alpha = 1) +
-    geom_hline(yintercept = 0, colour = "ivory4")
-
-  if(addSize){
-    g <-  g +
-      geom_point(aes(fill = fillvar, size = ESCI.N), col=cwhite, pch=21)
-    # scale_size_continuous("Sample Size", breaks = c(0.01, 0.1, 0.3, 0.5,0.8,1),
-    #                       labels = round(c(0.01, 0.1, 0.3, 0.5,0.8, 1) * mxN),
-    #                       guide = guide_legend(override.aes=list(colour="grey30",fill="grey70"), byrow = TRUE)
-    # )
-  } else {
-    g <-  g +
-      geom_point(aes(fill = fillvar), size = 2, col=cwhite, pch=21)
-  }
-
-  if(addMedian){
-    g <- g + geom_point(data=dfG,aes(x=x,y=y),
-                        color="black",fill=cpurp,alpha=1,size=3,pch=22)
-  }
-
-  if(addGlobalES){
-    g <- g + geom_point(data=dfGlobal,aes(x=x,y=y),
-                        color="black",fill=cblank,alpha=1,size=3,pch=21)
-  }
-
-  if(addOriES){
-    g <- g +
-      geom_point(data=oriES,aes(x=x,y=ESCI.r),
-                 color="black",fill=corange,alpha=1,size=3,pch=23)
-  }
-
-  if(addLabel){
-    g <- g +
-      geom_text(aes(label=study.source,hjust=0,color=fillvar),
-                size= 1,
-                angle = 45,
-                position=position_dodge(.9))
-  }
-
-  g <- g +
-    scale_y_continuous("Effect Size r", limits = c(-1,1)) +
-    scale_x_continuous("", breaks = unique(df$xn),
-                       labels = unique(paste(df$labels)),
-                       expand = c(0, 10)) +
-    scale_fill_manual("Sample",values = mypalette,  guide   = guide_legend(override.aes = list(size = 4), byrow = TRUE)) +
-    gg.theme() + coord_flip()  +
-    theme(legend.position = "top", legend.background=element_rect())
-
-  return(g)
-
-}
-
-swarmPlot <- function(df, anonymous=FALSE, addSize=FALSE, addMedian=TRUE, addGlobalES = TRUE, addOriES=TRUE, addLabel=FALSE, oriES=NULL, fillvar=c("WEIRD","USA","sigf")[1]){
+swarmPlot <- function(df, anonymous=FALSE, addSize=FALSE, addMedian=TRUE, addGlobalES = TRUE, addOriES=TRUE, addLabel=FALSE, oriES=NULL, fillvar=c("USA","sigf")[1]){
 
   #sourceInfo <- get.GoogleSheet(url="https://docs.google.com/spreadsheets/d/1Qn_kVkVGwffBAmhAbpgrTjdxKLP1bb2chHjBMVyGl1s/export?format=csv")$df
 
@@ -2915,16 +2584,16 @@ data.frame(
  test.table = NA,
  test.parameter1 = NA,
  test.parameter2 = NA,
- # test.cohensQ = NA,
- # test.cohensQ.l = NA,
- # test.cohensQ.u = NA,
- # test.bootR1 = NA,
- # test.bootR2 = NA,
- # test.bootCI.l = NA,
- # test.bootCI.u = NA,
- # test.fZ.r = NA,
- # test.fZ.l.r = NA,
- # test.fZ.u.r = NA,
+ test.cohensQ = NA,
+ test.cohensQ.l = NA,
+ test.cohensQ.u = NA,
+ test.bootR1 = NA,
+ test.bootR2 = NA,
+ test.bootCI.l = NA,
+ test.bootCI.u = NA,
+ test.fZ.r = NA,
+ test.fZ.l.r = NA,
+ test.fZ.u.r = NA,
  ESCI.estimate = NA,
  ESCI.statistic = NA,
  ESCI.p.value = NA,
@@ -3175,6 +2844,7 @@ any2any <- function(testInfo,
     }
   }
 
+
   if(esType%in%"Z"){
     if(alternative=="one"){
       n1<-N/2
@@ -3188,12 +2858,7 @@ any2any <- function(testInfo,
 
   # Use Cohen's dz for paired t-test
   if(esType%in%"t.p"){
-    # if(n1==n2){
-    #   N <- n1
-    # } else {
-    #   N <- sum(n1,n2, na.rm = TRUE)
-    # }
-    #N <- n1
+    n1 <- n2 <- N/2
     st <- testInfo$statistic / sqrt(N)
   }
 
@@ -3338,7 +3003,7 @@ any2any <- function(testInfo,
 
     ES <- cbind(sCI, ncp[,colnames(ncp)!="NNT"])
 
-  } else { # cnt >1
+  } else {
 
     if(esType.cl%in%"Asym"){
       sCI <- cbind(ncp    = esComp[[1]]$lOR,
@@ -3357,13 +3022,9 @@ any2any <- function(testInfo,
 
   # unique(ML2.key$stat.type)
   #  "t"    "t.r"  "OR"   "lm.t" "Z"    "f"    "lm.Z"
-
   if(cnt>1){
-
   if(!all((sign(ES$ncp)==sign(ES[ ,c("d","r")])),(sign(ES$ncp.lo)==sign(ES[ ,c("l.d","l.r")])),(sign(ES$ncp.hi)==sign(ES[ ,c("u.d","u.r")])), na.rm = TRUE) & !esType%in%c("OR","t.r","r")){
-
     if(keepSign){
-
       if(esType%in%c("X2","f")){
         id.l <- which(colnames(ES) %in% c("l.d", "l.g", "l.r", "l.z"))
         id.u <- which(colnames(ES) %in% c("u.d", "u.g", "u.r", "u.z"))
@@ -3379,9 +3040,8 @@ any2any <- function(testInfo,
       col.id <- sort(col.id)
       ES[ ,col.id] <- ES[ ,col.id] * sign(sCI)[1:cnt]
     }
-    }
-    }
-
+  }
+}
   return(ES)
 }
 
@@ -3497,6 +3157,14 @@ cor_test_fisherZ <- function(r1 = NULL,
   }
 
   alpha <- 1-conf.level
+
+  if(is.na(r2)){
+    if(!is.na(n2)){
+      message("Assuming 1 correlation...\n")
+      n1 <- n1+n2
+    }
+    n2 <- NA
+  }
 
   oneCor = FALSE
   if(all(is.null(r2),is.null(n2))){
@@ -3622,7 +3290,7 @@ cor_test_fisherZ <- function(r1 = NULL,
                               effect.size = effect.size,
                               effect.size.ci = effect.size.ci,
                               effect.size.int = interp),
-                         class = c("htest.fisherZ"))
+                         class = c("htest","fisherZ"))
   return(stat.test)
 }
 
@@ -3635,7 +3303,7 @@ cor_test_fisherZ <- function(r1 = NULL,
 #' @return nothing
 #' @export
 #'
-print.htest.fisherZ <- function(obj){
+print.cor_test_fisherZ <- function(obj){
   class(obj) <- "htest"
   print(obj)
   cat(names(obj$effect.size), "\n")
@@ -3689,8 +3357,8 @@ z.test <- function(x = 0, mu = 0, pi = NULL, N = 0, sigma = 1, proportion=FALSE,
     null.value <- pi
     names(null.value) <- "π"
   } else {
-    names(null.value) <- "mu"
     null.value <- mu
+    names(null.value) <- "mu"
   }
 
   if(proportion){
@@ -5097,8 +4765,8 @@ varfun.Savani.1 <- function(vars){
 #'
 
 varfun.Norenzayan.1 <- function(vars){
-  return(list(Belong  = rowMeans(vars$Belong == matrix(rep(1:2,10), nrow=nrow(vars$Belong), ncol=20, byrow = TRUE), na.rm = TRUE),
-              Similar = rowMeans(vars$Similar == matrix(rep(1:2,10), nrow=nrow(vars$Similar), ncol=20, byrow = TRUE), na.rm = TRUE),
+  return(list(Belong  = rowMeans(vars$Belong == matrix(rep(1:2,10), nrow=nrow(vars$Belong), ncol=20, byrow = TRUE), na.rm = T),
+              Similar = rowMeans(vars$Similar == matrix(rep(1:2,10), nrow=nrow(vars$Similar), ncol=20, byrow = TRUE), na.rm = T),
               N       = c(nrow(vars$Belong), nrow(vars$Similar))))
 
   # return(list(Belong  = rowMeans(vars$Belong==rep(1:2,10),na.rm=TRUE),

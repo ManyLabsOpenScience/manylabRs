@@ -1,9 +1,10 @@
 # Code to bulk generate analyses, saves consoe output to a log file.
-library(manylabRs)
+#library(manylabRs)
+source('~/Documents/GitHub/manylabRs/manylabRs/R/C-3PR_ASCII.R')
 init()
 
 # Setup variables ---------------------------------------------------------------------------------------------------
-tp <- 2
+tp <- 1
 subset = "all"
 
 ML2.key <- ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
@@ -57,4 +58,21 @@ tryCatch(testScript(studies = studies,
                     saveCSVfile = saveCSVfile,
                     saveRDSfile = saveRDSfile),
          finally = restore(con))
+
+# Ori effects ----
+
+df.ori <- get.oriESCI()
+
+export(df.ori$oriFULL,"~/Dropbox/Manylabs2/TestOutput/ORI_EFFECTS/oriFull.xlsx")
+export(df.ori$masterKey,"~/Dropbox/Manylabs2/TestOutput/ORI_EFFECTS/oriMasterKey.xlsx")
+
+
+# Test ---
+tp <- 4
+studies <- 83
+dfout <- get.analyses(studies = studies, analysis.type = tp, subset = subset)
+
+
+
+
 
