@@ -2793,7 +2793,7 @@ multi.PLOT <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 #' @param CL    Confidence Limit (default: .95).
 #' @param rID    Correlation among predictor values in a linear model.
 #' @param q      Number of predictors in the model.
-#' @param alternative     Alternative hypothesis (defult = "two").
+#' @param alternative     Alternative hypothesis (default = "two").
 #' @param keepSign     Return effect size with sign of test statistic? (default = TRUE).
 #' @param keepSignNames     Which effect sizes should keep the sign if \code{keepSign = TRUE}? Default is to keep the sign for: "r","l.r","u.r","fisher.z","l.z","u.z".
 #'
@@ -3347,9 +3347,9 @@ z.test <- function(x = 0, mu = 0, pi = NULL, N = 0, sigma = 1, proportion=FALSE,
   }
 
   if(alternative=="two.sided"){
-    p <- 1-pnorm(abs(z))
-  } else {
     p <- 2*(1-pnorm(abs(z)))
+  } else {
+    p <- 1-pnorm(abs(z))
   }
   names(z) <- "Z"
 
