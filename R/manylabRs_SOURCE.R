@@ -314,6 +314,8 @@ get.sourceData <- function(ML2.id,ML2.df,ML2.in){
 
   for(i in seq_along(dfname)){
     eval(parse(text=paste0(dfname[i],' <- ', unlist(ML2.id$vars)[i])))
+    eval(parse(text=paste0("attr(",names(ML2.in$study.vars)[[i]],",'uID')",
+                           " <- ",paste0(names(ML2.in$study.vars)[[i]],"[['uID']]"))))
     RawData[[i]] <- dplyr::mutate(ML2.df,
                                   Included = eval(parse(text=paste0('ML2.df$uID %in% ',dfname[i],'$uID')))
     )
@@ -332,7 +334,7 @@ get.sourceData <- function(ML2.id,ML2.df,ML2.in){
       )
     }
     N[i] <- eval(parse(text=paste0("sum(!is.na(",dfname[i],"), na.rm = TRUE)")))
-    eval(parse(text=paste0(dfname[i],"<-", dfname[i]," %>% dplyr::select(which(colnames(",dfname[i],")!='uID'))")))
+    # eval(parse(text=paste0(dfname[i],"<-", dfname[i]," %>% dplyr::select(which(colnames(",dfname[i],")!='uID'))")))
     eval(parse(text=paste0(dfname[i],' -> vars[[i]]')))
   }
 
@@ -857,7 +859,6 @@ get.analyses <- function(studies       = NA,
       ML2.df$study.order <- plyr::laply(seq_along(stmp), function(o){which(grepl(Stud,stmp[[o]]))%00%NA})
 
       # Loop over groups within study
-      ugroup       <- sort(na.exclude(unique(eval(parse(text=toRun$ugroup)))))
       tp           <- toRun$tp
       ML2.sr       <- list()
       ML2.var      <- list()
@@ -872,10 +873,12 @@ get.analyses <- function(studies       = NA,
 
       cnt          <- cnt + 1
 
-      ifelse(tp[cnt]==1,
-             runGroups <- "all",
-             runGroups <- ugroup
-      )
+      # Loop over sites in runGroups within a study
+      if(tp[cnt]==1){
+        runGroups <- "all"
+      } else {
+        runGroups <- sort(na.exclude(unique(ML2.df[[toRun$ugroup]])))
+      }
 
       disp(paste(s, ML2.key$study.analysis[[s]],"- START"), header = toupper(ML2.key$study.analysis[[s]]), footer = FALSE)
       cat("\n")
@@ -1788,19 +1791,24 @@ get.output <- function(key, vars, descr, group, analysis, varEqual, test, ESCI, 
 #' @param ML2.key Key
 #' @param studies studies
 #' @param tp analysis type
+#' @param doAll use all studies
 #'
 #' @return list of studies
 #' @export
 #'
-decide.analysis <- function(ML2.key, studies=NA, tp = NA){
+decide.analysis <- function(ML2.key, studies=NA, tp = NA, doAll = FALSE){
 
   analysis <- c('study.global.include', 'study.primary.include', 'study.secondary.include','study.global.include')
-  groups   <- c('ML2.df$Source.Global','ML2.df$Source.Primary','ML2.df$Source.Secondary','ML2.df$study.order')
+  groups   <- c('Source.Global','Source.Primary','Source.Secondary','study.order')
 
   if(is.null(tp)){tp <- NA}
   if(any(is.na(studies))){studies <- na.exclude(ML2.key$unique.id)}
   if(tp==4){
-    studies <- studies[studies%in%ML2.key$unique.id[ML2.key$study.figure2.include==1]]
+    if(doAllL){
+      studies <- studies[studies%in%ML2.key$unique.id]
+    } else {
+      studies <- studies[studies%in%ML2.key$unique.id[ML2.key$study.figure2.include==1]]
+    }
   }
 
   if(is.na(tp[1])){
@@ -3835,10 +3843,12 @@ summarySE <- function(data = NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 #' @export
 #'
 varfun.Huang.1 <- function(vars){
-  return(list(High = -1*(vars$High[[1]]-238),
+  out <- list(High = -1*(vars$High[[1]]-238),
               Low  = -1*(vars$Low[[1]]-238),
               N    = c(nrow(vars$High),nrow(vars$Low)))
-  )
+  attr(out$High,"uID") <- attributes(vars$High)$uID
+  attr(out$Low,"uID") <- attributes(vars$Low)$uID
+  return(out)
 }
 
 #' varfun.Kay.1

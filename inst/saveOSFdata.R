@@ -1,3 +1,7 @@
+# DhKkZo83SedKmY5V0fGD365umeL7qPzwxaOnjV4qSxZIPoF3wj1vtR9ax3ECugT3hxWlpi
+# osfr::login(pat = "DhKkZo83SedKmY5V0fGD365umeL7qPzwxaOnjV4qSxZIPoF3wj1vtR9ax3ECugT3hxWlpi")
+
+
 # Code to bulk generate analyses, saves consoe output to a log file.
 #library(manylabRs)
 source('~/Documents/GitHub/manylabRs/manylabRs/R/manylabRs_SOURCE.R')
@@ -36,17 +40,17 @@ init()
 # Kay.1
 
 # Setup variables ---------------------------------------------------------------------------------------------------
-tp <- 1
-subset = "all"
+tp     <- 1
+subset <- "all"
 
 ML2.key <- ML2.key <- get.GoogleSheet(data='ML2masteRkey')$df
 ML2.key <- ML2.key[!is.na(ML2.key$unique.id),]
 
-root <- normalizePath(file.path("~","OSFdata"))
+root    <- normalizePath(file.path("~","OSFdata"))
 studies <- unique(ML2.key$study.description)
 level0 <- ML2.key$study.analysis
 level1 <- c("Global","By Site","By Order", "By WEIRD")
-level2 <- c("Data","Results","Script")
+level2 <- c("Data","Results")
 
 dirs <- list()
 cnt = 0
@@ -66,7 +70,7 @@ for(s in seq_along(studies)){
 
 
 # Write the directories
-#lapply(dirs, FUN = dir.create, recursive = TRUE)
+lapply(dirs, FUN = dir.create, recursive = TRUE)
 
 ML2_S1 <- load("~/Dropbox/Manylabs2/Raw Data after Cleaning/RAW_DATA/ML2_Rawdata_S1.RData")
 ML2_S2 <- load("~/Dropbox/Manylabs2/Raw Data after Cleaning/RAW_DATA/ML2_Rawdata_S2.RData")
@@ -170,11 +174,6 @@ tryCatch(testScript(studies = studies,
          finally = restore(con))
 
 # Ori effects ----
-
-df.ori <- get.oriESCI()
-
-export(df.ori$oriFULL,"~/Dropbox/Manylabs2/TestOutput/ORI_EFFECTS/oriFull.xlsx")
-export(df.ori$masterKey,"~/Dropbox/Manylabs2/TestOutput/ORI_EFFECTS/oriMasterKey.xlsx")
 
 
 # Test ---
