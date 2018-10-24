@@ -3935,11 +3935,13 @@ varfun.Alter.1 <- function(vars){
   id.Fluent.cols    <- c(1, 5, 6)
   id.DisFluent.cols <- c(1, 5, 6)
 
-  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
+                                        vars[[2]]$uID),
                                 dependent = c(rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
                                               rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols]))),
-                                condition = c(rep(names(vars[1]),NROW(vars[[1]])), rep(names(vars[2]),NROW(vars[[2]]))))
-
+                                condition = c(rep(names(vars[1]),NROW(vars[[1]])),
+                                              rep(names(vars[2]),NROW(vars[[2]])))
+                                )
 
   return(list(Fluent    = rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
               DisFluent = rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols])),
