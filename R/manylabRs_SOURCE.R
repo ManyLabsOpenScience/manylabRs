@@ -1804,7 +1804,7 @@ decide.analysis <- function(ML2.key, studies=NA, tp = NA, doAll = FALSE){
   if(is.null(tp)){tp <- NA}
   if(any(is.na(studies))){studies <- na.exclude(ML2.key$unique.id)}
   if(tp==4){
-    if(doAllL){
+    if(doAll){
       studies <- studies[studies%in%ML2.key$unique.id]
     } else {
       studies <- studies[studies%in%ML2.key$unique.id[ML2.key$study.figure2.include==1]]
