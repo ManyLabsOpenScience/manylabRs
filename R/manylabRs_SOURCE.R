@@ -3547,9 +3547,10 @@ decide.EqualVar <- function(vars, labels, key, alpha=.05, criterion = 2, group, 
 
 tidyDF <- function(df){
   for(l in seq_along(df$labels)){
-    plyr::ldply(df$labels[[l]], function(d) tidy(data.frame(eval(parse(text = paste0('df$',d))))))
+    plyr::ldply(df$labels[[l]], function(d) broom::tidy(data.frame(eval(parse(text = paste0('df$',d))))))
   }
 }
+
 
 #' @title try.CATCH both warnings (with value) and errors
 #'
@@ -3843,12 +3844,16 @@ summarySE <- function(data = NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 #' @export
 #'
 varfun.Huang.1 <- function(vars){
-  out <- list(High = -1*(vars$High[[1]]-238),
+
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                dependent = c((-1*(vars$High[[1]]-238)),(-1*(vars$Low[[1]]-238))),
+                                condition = c(rep(names(vars[1]),NROW(vars[[1]])), rep(names(vars[2]),NROW(vars[[2]]))))
+
+  return(list(High = -1*(vars$High[[1]]-238),
               Low  = -1*(vars$Low[[1]]-238),
-              N    = c(nrow(vars$High),nrow(vars$Low)))
-  attr(out$High,"uID") <- attributes(vars$High)$uID
-  attr(out$Low,"uID") <- attributes(vars$Low)$uID
-  return(out)
+              N    = c(nrow(vars$High),nrow(vars$Low)),
+              cleanDataFilter = cleanDataFilter)
+  )
 }
 
 #' varfun.Kay.1
@@ -3867,16 +3872,22 @@ varfun.Kay.1 <- function(vars){
   var.Order <- rowMeans(dplyr::select(vars$Order, one_of(c('kay1.5','kay1.6'))))
   # [(1) Centered Subjective value = (GP1 + GP2)]$(2)residuals + (3) mean Willingness to engage in goal pursuit
   var.windex.Order <-lm(scale(vars$Order$kay1.4,scale=F)~var.Order)$residuals + var.Order
+  vars$Order$windex.Order <-var.windex.Order
 
   var.DisOrder <- rowMeans(dplyr::select(vars$DisOrder,one_of(c('kay2.5','kay2.6'))))
   # [(1) Centered Subjective value = (GP1 + GP2)]$(2)residuals + (3) mean Willingness to engage in goal pursuit
   var.windex.DisOrder <-lm(scale(vars$DisOrder$kay2.4,scale=F)~var.DisOrder)$residuals + var.DisOrder
+  vars$DisOrder$var.windex.DisOrder <- var.windex.DisOrder
 
-  return(list(Order=var.windex.Order,
-              DisOrder=var.windex.DisOrder,
-              N = c(length(var.windex.Order),length(var.windex.DisOrder)))
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),dependent = c(vars[[1]]$windex.Order,vars[[2]]$var.windex.DisOrder), condition = c(rep(names(vars[1]),NROW(vars[[1]])), rep(names(vars[2]),NROW(vars[[2]]))))
+
+  return(list(Order         = var.windex.Order,
+              DisOrder      = var.windex.DisOrder,
+              N             = c(length(var.windex.Order),length(var.windex.DisOrder)),
+              cleanDataFilter = cleanDataFilter)
   )
 }
+
 
 #' varfun.Alter.1
 #'
@@ -3908,8 +3919,10 @@ varfun.Alter.1 <- function(vars){
   hiP  <- .75
 
   # Get correct answers
-  ok.Fluent   <- sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
-  ok.DisFluent<- sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
+  ok.Fluent   <- sapply(seq_along(vars$Fluent[,-NCOL(vars$Fluent)]), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
+  ok.DisFluent<- sapply(seq_along(vars$DisFluent[,-NCOL(vars$DisFluent)]), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
+
+
 
   # Find columns
   # Syllogisms to include for each sample
@@ -3922,10 +3935,17 @@ varfun.Alter.1 <- function(vars){
   id.Fluent.cols    <- c(1, 5, 6)
   id.DisFluent.cols <- c(1, 5, 6)
 
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                dependent = c(rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
+                                              rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols]))),
+                                condition = c(rep(names(vars[1]),NROW(vars[[1]])), rep(names(vars[2]),NROW(vars[[2]]))))
+
+
   return(list(Fluent    = rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
               DisFluent = rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols])),
-              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)))
-  )
+              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Alter.2
