@@ -3846,8 +3846,8 @@ summarySE <- function(data = NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 varfun.Huang.1 <- function(vars){
 
   cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
-                                dependent = c((-1*(vars$High[[1]]-238)),(-1*(vars$Low[[1]]-238))),
-                                condition = c(rep(names(vars[1]),NROW(vars[[1]])), rep(names(vars[2]),NROW(vars[[2]]))))
+                                variable = c((-1*(vars$High[[1]]-238)),(-1*(vars$Low[[1]]-238))),
+                                factor = c(rep(names(vars[1]),NROW(vars[[1]])), rep(names(vars[2]),NROW(vars[[2]]))))
 
   return(list(High = -1*(vars$High[[1]]-238),
               Low  = -1*(vars$Low[[1]]-238),
@@ -3879,7 +3879,7 @@ varfun.Kay.1 <- function(vars){
   var.windex.DisOrder <-lm(scale(vars$DisOrder$kay2.4,scale=F)~var.DisOrder)$residuals + var.DisOrder
   vars$DisOrder$var.windex.DisOrder <- var.windex.DisOrder
 
-  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),dependent = c(vars[[1]]$windex.Order,vars[[2]]$var.windex.DisOrder), condition = c(rep(names(vars[1]),NROW(vars[[1]])), rep(names(vars[2]),NROW(vars[[2]]))))
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),variable = c(vars[[1]]$windex.Order,vars[[2]]$var.windex.DisOrder), factor = c(rep(names(vars[1]),NROW(vars[[1]])), rep(names(vars[2]),NROW(vars[[2]]))))
 
   return(list(Order         = var.windex.Order,
               DisOrder      = var.windex.DisOrder,
@@ -3937,9 +3937,9 @@ varfun.Alter.1 <- function(vars){
 
   cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
                                         vars[[2]]$uID),
-                                dependent = c(rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
+                                variable = c(rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
                                               rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols]))),
-                                condition = c(rep(names(vars[1]),NROW(vars[[1]])),
+                                factor = c(rep(names(vars[1]),NROW(vars[[1]])),
                                               rep(names(vars[2]),NROW(vars[[2]])))
                                 )
 
@@ -3976,18 +3976,32 @@ varfun.Alter.2 <- function(vars){
                       s5=c(3),
                       s6=c(8))
 
+  # # Get correct answers
+  # ok.Fluent   <- sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
+  # ok.DisFluent<- sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
+
   # Get correct answers
-  ok.Fluent   <- sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
-  ok.DisFluent<- sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
+  ok.Fluent   <- sapply(seq_along(vars$Fluent[,-NCOL(vars$Fluent)]), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
+  ok.DisFluent<- sapply(seq_along(vars$DisFluent[,-NCOL(vars$DisFluent)]), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
+
 
   # Syllogisms to include for each sample
   # First and last
   id.Fluent.cols      <- c(1,6)
   id.DisFluent.cols   <- c(1,6)
 
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
+                                        vars[[2]]$uID),
+                                variable = c(rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
+                                              rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols]))),
+                                factor = c(rep(names(vars[1]),NROW(vars[[1]])),
+                                              rep(names(vars[2]),NROW(vars[[2]])))
+  )
+
   return(list(Fluent    = rowSums(ok.Fluent[,id.Fluent.cols]),
               DisFluent = rowSums(ok.DisFluent[,id.DisFluent.cols]),
-              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)))
+              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)),
+              cleanDataFilter = cleanDataFilter)
   )
 }
 
@@ -4021,9 +4035,12 @@ varfun.Alter.3 <- function(vars){
 
   # Get correct answers for ids Alter first
   if(sum(id,na.rm=T)>0){
-    ok.Fluent   <- rbind(sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[id, c])%in%var.correct[[c]]))
-    ok.DisFluent<- rbind(sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[id, c])%in%var.correct[[c]]))
-  } else {
+    # ok.Fluent   <- rbind(sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[id, c])%in%var.correct[[c]]))
+    # ok.DisFluent<- rbind(sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[id, c])%in%var.correct[[c]]))
+    # Get correct answers
+    ok.Fluent   <- sapply(seq_along(vars$Fluent[,-NCOL(vars$Fluent)]), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
+    ok.DisFluent<- sapply(seq_along(vars$DisFluent[,-NCOL(vars$DisFluent)]), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
+     } else {
     ok.Fluent    <- rep(FALSE,6)
     ok.DisFluent <- rep(FALSE,6)
   }
@@ -4032,10 +4049,18 @@ varfun.Alter.3 <- function(vars){
   id.Fluent.cols    <- c(1,5,6)
   id.DisFluent.cols <- c(1,5,6)
 
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
+                                        vars[[2]]$uID),
+                                variable = c(rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
+                                              rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols]))),
+                                factor = c(rep(names(vars[1]),NROW(vars[[1]])),
+                                              rep(names(vars[2]),NROW(vars[[2]])))
+  )
+
   return(list(Fluent    = rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
               DisFluent = rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols])),
-              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)))
-  )
+              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)),
+              cleanDataFilter = cleanDataFilter))
 }
 
 
@@ -4068,8 +4093,11 @@ varfun.Alter.4 <- function(vars){
 
   # Get correct answers for ids Alter first
   if(sum(id,na.rm=T)>0){
-    ok.Fluent   <- rbind(sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[id, c])%in%var.correct[[c]]))
-    ok.DisFluent<- rbind(sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[id, c])%in%var.correct[[c]]))
+    # ok.Fluent   <- rbind(sapply(seq_along(vars$Fluent), function(c) unlist(vars$Fluent[id, c])%in%var.correct[[c]]))
+    # ok.DisFluent<- rbind(sapply(seq_along(vars$DisFluent), function(c) unlist(vars$DisFluent[id, c])%in%var.correct[[c]]))
+    # Get correct answers
+    ok.Fluent   <- sapply(seq_along(vars$Fluent[,-NCOL(vars$Fluent)]), function(c) unlist(vars$Fluent[,c])%in%var.correct[[c]])
+    ok.DisFluent<- sapply(seq_along(vars$DisFluent[,-NCOL(vars$DisFluent)]), function(c) unlist(vars$DisFluent[,c])%in%var.correct[[c]])
   } else {
     ok.Fluent    <- rep(FALSE,6)
     ok.DisFluent <- rep(FALSE,6)
@@ -4080,10 +4108,18 @@ varfun.Alter.4 <- function(vars){
   id.Fluent.cols      <- c(1,6)
   id.DisFluent.cols   <- c(1,6)
 
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
+                                        vars[[2]]$uID),
+                                variable = c(rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
+                                              rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols]))),
+                                factor = c(rep(names(vars[1]),NROW(vars[[1]])),
+                                              rep(names(vars[2]),NROW(vars[[2]])))
+  )
+
   return(list(Fluent    = rowSums(rbind(ok.Fluent[ ,id.Fluent.cols])),
               DisFluent = rowSums(rbind(ok.DisFluent[ ,id.DisFluent.cols])),
-              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)))
-  )
+              N = c(nrow(ok.Fluent),nrow(ok.DisFluent)),
+              cleanDataFilter = cleanDataFilter))
 }
 
 #' varfun.Graham.1
@@ -4099,10 +4135,17 @@ varfun.Alter.4 <- function(vars){
 #'
 
 varfun.Graham.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = vars[[1]]$uID,
+                                variable1 = vars$Politics$politics,
+                                variable2 =rowMeans(vars$Binding,na.rm=TRUE)
+                                )
+
   return(list(Politics = vars$Politics$politics,
-              Binding  = rowMeans(vars$Binding,na.rm=T),
-              N        = sum(complete.cases(rowMeans(vars$Binding,na.rm=T), vars$Politics$politics)))
-  )
+              Binding  = rowMeans(vars$Binding,na.rm=TRUE),
+              N        = sum(complete.cases(rowMeans(vars$Binding,na.rm=TRUE), vars$Politics$politics)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Graham.2
@@ -4114,10 +4157,17 @@ varfun.Graham.1 <- function(vars){
 #' @return Dataset ready for analysis
 #'
 varfun.Graham.2 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = vars[[1]]$uID,
+                                variable1 = vars$Politics$politics,
+                                variable2 = rowMeans(vars$Individual, na.rm = TRUE)
+                                )
+
   return(list(Politics   = vars$Politics$politics,
               Individual = rowMeans(vars$Individual, na.rm = TRUE),
-              N          = sum(complete.cases(rowMeans(vars$Individual,na.rm=TRUE), vars$Politics$politics)))
-  )
+              N          = sum(complete.cases(rowMeans(vars$Individual,na.rm=TRUE), vars$Politics$politics)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Rottenstreich.1
@@ -4132,10 +4182,16 @@ varfun.Graham.2 <- function(vars){
 #' @return Dataset ready for analysis
 #'
 varfun.Rottenstreich.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
+                                        vars[[2]]$uID),
+                                variable = factor(c(vars$Low[[1]],vars$Certain[[1]]),levels=c(1,2),labels=vars$labels$Response),
+                                factor = factor(c(rep(1,nrow(vars$Low)),rep(2,nrow(vars$Certain))),levels=c(1,2),labels=vars$labels$Condition))
+
   return(list(Response  = factor(c(vars$Low[[1]],vars$Certain[[1]]),levels=c(1,2),labels=vars$labels$Response),
               Condition = factor(c(rep(1,nrow(vars$Low)),rep(2,nrow(vars$Certain))),levels=c(1,2),labels=vars$labels$Condition),
-              N      = c(nrow(vars$Certain),nrow(vars$Low)))
-  )
+              N      = c(nrow(vars$Certain),nrow(vars$Low)),
+              cleanDataFilter = cleanDataFilter))
 }
 
 #' varfun.Bauer.1
@@ -4149,10 +4205,19 @@ varfun.Rottenstreich.1 <- function(vars){
 #' @return Dataset ready for analysis
 #'
 varfun.Bauer.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
+                                        vars[[2]]$uID),
+                                variable = c(vars$Consumer[[2]],vars$Individual[[2]]),
+                                factor =  c(rep(names(vars[1]),NROW(vars[[1]])),
+                                               rep(names(vars[2]),NROW(vars[[2]]))))
+
+
   return(list(Consumer  = vars$Consumer[[2]],
               Individual= vars$Individual[[2]],
-              N         = c(length(vars$Consumer[[2]]),length(vars$Individual[[2]])))
-  )
+              N         = c(length(vars$Consumer[[2]]),length(vars$Individual[[2]])),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Miyamoto.1
@@ -4175,11 +4240,19 @@ varfun.Bauer.1 <- function(vars){
 #' miya2.7=perceived constraint (against death condition; higher values= higher freedom).
 
 varfun.Miyamoto.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
+                                        vars[[2]]$uID),
+                                variable1 = c(vars$CapitalCon[[1]],vars$CapitalPro[[1]]),
+                                factor =  factor(c(rep(1,nrow(vars$CapitalCon)),rep(2,nrow(vars$CapitalPro))),levels=c(1,2),labels=vars$labels$Condition),
+                                variable2 = scale(c(vars$CapitalCon[[2]],vars$CapitalPro[[2]]), scale = FALSE))
+
+
   return(list(Attitude  = c(vars$CapitalCon[[1]],vars$CapitalPro[[1]]),
               Condition = factor(c(rep(1,nrow(vars$CapitalCon)),rep(2,nrow(vars$CapitalPro))),levels=c(1,2),labels=vars$labels$Condition),
               Constraint= scale(c(vars$CapitalCon[[2]],vars$CapitalPro[[2]]), scale = FALSE),
-              N = c(nrow(vars$CapitalCon),nrow(vars$CapitalPro)))
-  )
+              N = c(nrow(vars$CapitalCon),nrow(vars$CapitalPro)),
+              cleanDataFilter = cleanDataFilter))
 }
 
 #' varfun.Miyamoto.2
@@ -4200,15 +4273,23 @@ varfun.Miyamoto.1 <- function(vars){
 #' miya2.7=perceived constraint (against death condition; higher values= higher freedom).
 
 varfun.Miyamoto.2 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,
+                                        vars[[2]]$uID),
+                                variable1 = c(vars$CapitalCon[[1]],vars$CapitalPro[[1]]),
+                                factor =  factor(c(rep(1,nrow(vars$CapitalCon)),rep(2,nrow(vars$CapitalPro))),levels=c(1,2),labels=vars$labels$Condition),
+                                variable2 = scale(c(vars$CapitalCon[[2]],vars$CapitalPro[[2]]), scale = FALSE),
+                                moderator = scale(c(vars$CapitalCon[[3]],vars$CapitalPro[[3]]), scale=FALSE))
+
+
   return(list(Attitude  = c(vars$CapitalCon[[1]],vars$CapitalPro[[1]]),
               Condition = factor(c(rep(1,nrow(vars$CapitalCon)),rep(2,nrow(vars$CapitalPro))),levels=c(1,2),labels=vars$labels$Condition),
               Constraint= scale(c(vars$CapitalCon[[2]],vars$CapitalPro[[2]]), scale=FALSE),
               Moderator = scale(c(vars$CapitalCon[[3]],vars$CapitalPro[[3]]), scale=FALSE),
-              N = c(nrow(vars$CapitalCon),nrow(vars$CapitalPro)))
-  )
+              N = c(nrow(vars$CapitalCon),nrow(vars$CapitalPro)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
-
-
 
 
 #' varfun.Inbar.1
@@ -4228,7 +4309,6 @@ varfun.Miyamoto.2 <- function(vars){
 #'
 
 varfun.Inbar.1 <- function(vars){
-  #   require(dplyr)
 
   vars$SameKiss$disg1.11 <- -vars$SameKiss$disg1.11
   vars$SameKiss$disg1.12 <- -vars$SameKiss$disg1.12
@@ -4247,12 +4327,18 @@ varfun.Inbar.1 <- function(vars){
   colnames(vars$SameKiss)[1] <- outcome
   colnames(vars$DiffKiss)[1] <- outcome
 
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                variable1 = c(vars$SameKiss[['DSRs']],vars$DiffKiss[['DSRd']]),
+                                variable2 = c(vars$SameKiss[[outcome]],vars$DiffKiss[[outcome]]),
+                                factor =  c(rep(names(vars[1]),NROW(vars[[1]])),
+                                            rep(names(vars[2]),NROW(vars[[2]]))))
+
   return(list(r1=cbind(vars$SameKiss['DSRs'],vars$SameKiss[outcome]),
               r2=cbind(vars$DiffKiss['DSRd'],vars$DiffKiss[outcome]),
-              N = c(nrow(vars$SameKiss),nrow(vars$DiffKiss)))
-  )
+              N = c(nrow(vars$SameKiss),nrow(vars$DiffKiss)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
-
 
 
 #' varfun.Inbar.2
@@ -4265,10 +4351,17 @@ varfun.Inbar.1 <- function(vars){
 #' @export
 #'
 varfun.Inbar.2 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                variable = c(vars$SameKiss[[1]],vars$DiffKiss[[1]]),
+                                factor =  c(rep(names(vars[1]),NROW(vars[[1]])),
+                                            rep(names(vars[2]),NROW(vars[[2]]))))
+
   return(list(SameKiss= vars$SameKiss[[1]],
               DiffKiss= vars$DiffKiss[[1]],
-              N =  c(nrow(vars$SameKiss),nrow(vars$DiffKiss)))
-  )
+              N =  c(nrow(vars$SameKiss),nrow(vars$DiffKiss)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 
@@ -4297,10 +4390,18 @@ varfun.Inbar.2 <- function(vars){
 #'
 
 varfun.Critcher.1 <- function(vars){
+
+
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                variable = c(as.numeric(vars$P97$crit1.1),as.numeric(vars$P17$crit2.1)),
+                                factor =  c(rep(names(vars[1]),NROW(vars[[1]])),
+                                            rep(names(vars[2]),NROW(vars[[2]]))))
+
   return(list(P97    = as.numeric(vars$P97$crit1.1),
               P17    = as.numeric(vars$P17$crit2.1),
-              N      =  c(nrow(vars$P97),nrow(vars$P17)))
-  )
+              N      =  c(nrow(vars$P97),nrow(vars$P17)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' van.Lange.1
