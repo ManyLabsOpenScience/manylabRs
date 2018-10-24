@@ -1564,6 +1564,7 @@ get.descriptives <- function(stat.test, vars, keytable){
   vars$N <- NULL
 
   if(any(names(vars) == "df")){vars$df <- NULL}
+  if(any(names(vars) == "cleanDataFilter")){vars$cleanDataFilter <- NULL}
 
   if(any(names(stat.test) == "method")){
     method = stat.test$method
@@ -1615,7 +1616,7 @@ get.descriptives <- function(stat.test, vars, keytable){
 
     descr.raw  <- plyr::ldply(vars, function(ignore){
       #if(is.list(gd)){gd<-unlist(gd)}
-      if(!is.data.frame(ignore)){ignore <- data.frame(ignore)}
+      if(!is.data.frame(ignore)){ignore <- data.frame(as.numeric(ignore))}
       return(broom::tidy(ignore))})
 
     colnames(descr.raw)[colnames(descr.raw)==".id"] <- "name"
@@ -3496,6 +3497,8 @@ pcorbsub<-function(isub, x, y)
 #' @export
 #'
 decide.EqualVar <- function(vars, labels, key, alpha=.05, criterion = 2, group, verbose = FALSE){
+
+  if(any(names(vars) == "cleanDataFilter")){vars$cleanDataFilter <- NULL}
 
   vars$N  <- NULL
   longDat <- NULL
