@@ -2935,7 +2935,7 @@ any2any <- function(testInfo,
     }
 
     if(getCI){
-      sCI <- try.CATCH(get.ncpCI(st, df1, df2, N, esType.cl, CL, keepSign, alternative))
+      sCI <- get.ncpCI(st, df1, df2, N, esType.cl, CL, keepSign, alternative)
       if(esType=="f"){sCI[1,is.na(sCI)]<-1}
       if(esType%in%c("t","t.p","t.r","Z")){sCI[1,is.na(sCI)]<-0}
     }
