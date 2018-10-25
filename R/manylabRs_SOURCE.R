@@ -1955,7 +1955,8 @@ l_ply(seq_along(dfout$aggregated),
 generateOutput <-  function(describe = describe,
                             var.lor  = NA,
                             runningGroup = "None",
-                            runningAnalysis = "None"){
+                            runningAnalysis = "None",
+                            stat.params = NA){
 
   ESCI <- list(value = NULL,
                warning = "init")
@@ -1980,20 +1981,23 @@ if(is.null(test$method)){
   if(!is.na(test[1,1])){
 
     ESCI <- try.CATCH(any2any(testInfo  = test,
-                              df1       = test[, which(grepl("parameter",colnames(test)))[1]],
-                              df2       = test[, which(grepl("parameter2",colnames(test)))],
+                              df1       = as.numeric(test[, which(grepl("parameter",colnames(test)))[1]]),
+                              df2       = as.numeric(test[, which(grepl("parameter2",colnames(test)))]),
                               N         = sum(Nv, na.rm = TRUE),
                               n1        = Nv[1],
                               n2        = Nv[2],
                               esType    = test$estype,
-                              var.lor   = var.lor,
-                              CL          = stat.params$conf.level,
+                              var.lor   = var.lor,CIcalc = TRUE,
+                              CL        = ifelse(is.null(stat.params$conf.level),
+                                                 .95,
+                                                 stat.params$conf.level),
                               keepSign    = TRUE,
                               alternative = ifelse(is.null(test$alternative),
                                                    stat.params[[4]],
                                                    as.character(test$alternative))
-    ))
-  }
+                              )
+                      )
+    }
 
 
   if(all(is.null(ESCI$warning),
@@ -2829,7 +2833,9 @@ any2any <- function(testInfo,
                     N   = NULL, n1 = NULL, n2 = NULL,
                     esType  = NA,
                     var.lor = NA,
-                    CIcalc  = TRUE, CL = .95, rID = 0, q = 1,
+                    CIcalc  = TRUE,
+                    CL = .95,
+                    rID = 0, q = 1,
                     alternative   = "two", keepDirection = TRUE,
                     keepSign      = TRUE,
                     keepSignNames = c("r","l.r","u.r","fisher.z","l.z","u.z")){
@@ -2929,7 +2935,7 @@ any2any <- function(testInfo,
     }
 
     if(getCI){
-      sCI <- get.ncpCI(st, df1, df2, N, esType.cl, CL, keepSign, alternative)
+      sCI <- try.CATCH(get.ncpCI(st, df1, df2, N, esType.cl, CL, keepSign, alternative))
       if(esType=="f"){sCI[1,is.na(sCI)]<-1}
       if(esType%in%c("t","t.p","t.r","Z")){sCI[1,is.na(sCI)]<-0}
     }
