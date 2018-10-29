@@ -1586,6 +1586,8 @@ get.descriptives <- function(stat.test, vars, keytable){
       tmp       <- as.data.frame(vars)
       Cid <- which(grepl("(ID)",colnames(tmp)))
       if(length(Cid)!=0){tmp  <- select(tmp, -Cid)}
+      cID <- laply(1:NCOL(tmp), function(c) is.discrete(tmp[,c]))
+      tmp <- tmp[,-which(cID)]
       descr.raw <- plyr::ddply(tmp, names(tmp)[id], broom::tidy)
       descr.raw <- descr.raw[!grepl("[*]",descr.raw$column), ]
 
