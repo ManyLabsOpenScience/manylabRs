@@ -59,8 +59,12 @@ export(ML2.key,file.path(dirs[[cnt]],"ML2_KeyTable.csv"))
 export(SourceInfoTable,file.path(dirs[[cnt]],"ML2_SourceInfoTable.csv"))
 export(WeirdInfoTable,file.path(dirs[[cnt]],"ML2_SourceInfoTable_Weird.csv"))
 
-load("~/Dropbox/Manylabs2/Raw Data after Cleaning/RAW_DATA/ML2_Rawdata_S1.RData")
-load("~/Dropbox/Manylabs2/Raw Data after Cleaning/RAW_DATA/ML2_Rawdata_S2.RData")
+# load("~/Dropbox/Manylabs2/Raw Data after Cleaning/RAW_DATA/ML2_Rawdata_S1.RData")
+# load("~/Dropbox/Manylabs2/Raw Data after Cleaning/RAW_DATA/ML2_Rawdata_S2.RData")
+
+ML2_S1 <- rio::import("~/Dropbox/Manylabs2/Raw Data after Cleaning/Package_data/ML2_S1.rda")
+ML2_S2 <- rio::import("~/Dropbox/Manylabs2/Raw Data after Cleaning/Package_data/ML2_S2.rda")
+
 
 export(ML2_S1,file.path(dirs[[cnt-1]],"ML2_Slate1.csv"))
 export(ML2_S2,file.path(dirs[[cnt-1]],"ML2_Slate2.csv"))

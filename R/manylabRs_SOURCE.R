@@ -569,7 +569,7 @@ get.oriESCI <- function(CL=.95){
       test$estimate <- test$statistic <- tanh(tmp$effect.size[[1]])
       test$conf.low <-  tanh(tmp$effect.size.ci[[1]])
       test$conf.high <- tanh(tmp$effect.size.ci[[2]])
-      testt$method <- stat.test$method
+      test$method <- stat.test$method
       #class(stat.test) <- "htest"
     }
 
@@ -1559,7 +1559,7 @@ get.descriptives <- function(stat.test, vars, keytable){
   esType <- gsub("lm[.]","",keytable$stat.type)
 
 
-  # Descriptive structures ------------------------------------------------------------------------------------------
+  # Descriptive structures ---------------------------------------
   N <- vars$N
   vars$N <- NULL
 
@@ -1573,7 +1573,6 @@ get.descriptives <- function(stat.test, vars, keytable){
   }
 
   if(any(plyr::laply(vars,is.factor))){
-
     if((esType!="X2")&(!grepl("OR",esType))){
       descr.sum    <- plyr::ldply(unique(vars$Condition), function(c){
         Response <- unlist(vars[1])
@@ -1586,12 +1585,13 @@ get.descriptives <- function(stat.test, vars, keytable){
       tmp       <- as.data.frame(vars)
       Cid <- which(grepl("(ID)",colnames(tmp)))
       if(length(Cid)!=0){tmp  <- select(tmp, -Cid)}
-      cID <- laply(1:NCOL(tmp), function(c) is.discrete(tmp[,c]))
-      tmp <- tmp[,-which(cID)]
-      descr.raw <- plyr::ddply(tmp, names(tmp)[id], broom::tidy)
-      descr.raw <- descr.raw[!grepl("[*]",descr.raw$column), ]
+      # cID <- laply(1:NCOL(tmp), function(c) is.discrete(tmp[,c]))
+      # tmp <- tmp[,-which(cID)]
 
-      colnames(descr.raw)[colnames(descr.raw)%in%names(id)[id]] <- paste("name")
+      descr.raw <- eval(parse(text = paste0("tmp %>% group_by(",names(id[id]),") %>% summarise(column = '",names(id[id]),"', n = n())")))
+      #descr.raw <- plyr::ddply(tmp, names(tmp)[id], broom::tidy)
+      #descr.raw <- descr.raw[!grepl("[*]",descr.raw$column), ]
+     colnames(descr.raw)[colnames(descr.raw)%in%names(id)[id]] <- paste("name")
     }
 
     if((esType=="X2")|(grepl("OR",esType))){
@@ -3175,13 +3175,15 @@ cor_test_fisherZ <- function(r1 = NULL,
 
   alpha <- 1-conf.level
 
-  if(is.na(r2)){
-    if(!is.na(n2)){
+
+  if(is.na(r2%00%NA)){
+    if(!is.na(n2%00%NA)){
       message("Assuming 1 correlation...\n")
       n1 <- n1+n2
     }
     n2 <- NA
   }
+
 
   oneCor = FALSE
   if(all(is.null(r2),is.null(n2))){
@@ -4402,7 +4404,6 @@ varfun.Inbar.2 <- function(vars){
 
 varfun.Critcher.1 <- function(vars){
 
-
   cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
                                 variable = c(as.numeric(vars$P97$crit1.1),as.numeric(vars$P17$crit2.1)),
                                 factor =  c(rep(names(vars[1]),NROW(vars[[1]])),
@@ -4448,14 +4449,15 @@ varfun.vanLange.1 <- function(vars){
   SVO.self  <- SVO[seq(1,11,by=2), ]
   SVO.other <- SVO[seq(2,12,by=2), ]
 
+  #vars$RawDataFilter
   id <- which((vars$RawDataFilter[[1]]$Included==TRUE)&(vars$RawDataFilter[[2]]$Included==TRUE))
-  SVO.index <- plyr::ldply(seq_along(id), function(s){cbind(uID = id[s], SVO = atan(
+  SVO.index <- plyr::ldply(seq_along(id), function(s){cbind(uID =  vars$RawDataFilter[[1]]$uID[id[s]], SVO = atan(
     (mean(SVO.other[array(c(1:6,unlist(vars$SVO[s, ])),dim=c(6,2))])-50)/
       (mean( SVO.self[array(c(1:6,unlist(vars$SVO[s, ])),dim=c(6,2))])-50)))}
   )
 
   #vars$SVO$Siblings <- vars$SVO$van.p2.1_1_TEXT+vars$SVO$van.p2.1_2_TEXT
-  SVO.siblings <- cbind.data.frame(uID     = id,
+  SVO.siblings <- cbind.data.frame(uID     = vars$RawDataFilter[[2]]$uID[id],
                                    Older   = as.numeric(vars$RawDataFilter[[2]]$van.p2.1_1_TEXT[id]),
                                    Younger = as.numeric(vars$RawDataFilter[[2]]$van.p2.1_2_TEXT[id])
   )
@@ -4464,10 +4466,15 @@ varfun.vanLange.1 <- function(vars){
 
   SVO.siblings$Total <- rowSums(SVO.siblings[c('Younger','Older')])
 
+  cleanDataFilter <- data.frame(uID = SVO.siblings$uID,
+                                variable1 = as.numeric(SVO.index$SVO),
+                                variable2 = as.numeric(SVO.siblings$Total))
+
   return(list(SVO.index = SVO.index$SVO,
               Siblings  = SVO.siblings$Total,
-              N         = c(nrow(SVO.index),NULL))
-  )
+              N         = c(nrow(SVO.index),NULL),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Hauser.1
@@ -4494,9 +4501,14 @@ varfun.Hauser.1 <- function(vars){
   GG <- unlist(vars$GreaterGood[names(vars$GreaterGood)[[1]]])
   N  <- c(nrow(vars$SideEffect),nrow(vars$GreaterGood))
 
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                variable = factor(c(SE ,GG),levels=c(1,2),labels=vars$labels$Response),
+                                factor =  factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition))
+
   return(list(Response = factor(c(SE ,GG),levels=c(1,2),labels=vars$labels$Response),
               Condition = factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition),
-              N = N)
+              N = N,
+              cleanDataFilter = cleanDataFilter)
   )
 }
 
@@ -4529,24 +4541,24 @@ varfun.Anderson.1 <- function(vars){
 
   # Negative
   PANASlowNA   <- dplyr::select(vars$Low,
-                                one_of(unlist(strsplit(paste0("and1.4_",c(2,3,6,7,10,11,13,15,16,20),sep="|"),"|",fixed=T))))
+                                one_of(unlist(strsplit(paste0("and1.4_",c(2,3,6,7,10,11,13,15,16,20),sep="|"),"|",fixed=TRUE))))
   # Negative Recode
   PANASlowNAr  <- 6-PANASlowNA
   # Positive
   PANASlowPA   <- dplyr::select(vars$Low,
-                                one_of(unlist(strsplit(paste0("and1.4_",c(1,4,5,8,9,12,14,17,18,19),sep="|"),"|",fixed=T))))
+                                one_of(unlist(strsplit(paste0("and1.4_",c(1,4,5,8,9,12,14,17,18,19),sep="|"),"|",fixed=TRUE))))
   # SWSL
   SWLSlow  <-  dplyr::select(vars$Low,
                              one_of(c("and1.3_1", "and1.3_2", "and1.3_3", "and1.3_4", "and1.3_5")))
 
   # Negative
   PANAShighNA  <- dplyr::select(vars$High,
-                                one_of(unlist(strsplit(paste0("and2.4_",c(2,3,6,7,10,11,13,15,16,20),sep="|"),"|",fixed=T))))
+                                one_of(unlist(strsplit(paste0("and2.4_",c(2,3,6,7,10,11,13,15,16,20),sep="|"),"|",fixed=TRUE))))
   # Negative Recode
   PANAShighNAr <- 6-PANAShighNA
   # Positive
   PANAShighPA  <- dplyr::select(vars$High,
-                                one_of(unlist(strsplit(paste0("and2.4_",c(1,4,5,8,9,12,14,17,18,19),sep="|"),"|",fixed=T))))
+                                one_of(unlist(strsplit(paste0("and2.4_",c(1,4,5,8,9,12,14,17,18,19),sep="|"),"|",fixed=TRUE))))
   # SWSL
   SWLShigh     <- dplyr::select(vars$High,
                                 one_of(c("and2.3_1", "and2.3_2", "and2.3_3", "and2.3_4", "and2.3_5")))
@@ -4557,10 +4569,15 @@ varfun.Anderson.1 <- function(vars){
   MhighlowPA  <- scale(c(rowMeans(PANAShighPA), rowMeans(PANASlowPA)))
   MhighlowSW  <- scale(c(rowMeans(SWLShigh),rowMeans(SWLSlow)))
 
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                variable = (MhighlowSW + MhighlowPA + MhighlowNAr)/3,
+                                factor =  factor(c(rep("High",nrow(PANAShighPA)),rep("Low",nrow(PANASlowPA)))))
+
   return(list(SWB        = (MhighlowSW + MhighlowPA + MhighlowNAr)/3,
               Condition = factor(c(rep("High",nrow(PANAShighPA)),rep("Low",nrow(PANASlowPA)))),
-              N    = c(nrow(PANAShighPA), nrow(PANASlowPA)))
-  )
+              N    = c(nrow(PANAShighPA), nrow(PANASlowPA)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Ross.1
@@ -4579,10 +4596,15 @@ varfun.Anderson.1 <- function(vars){
 #'
 
 varfun.Ross.1 <- function(vars){
+  cleanDataFilter <- data.frame(uID = vars[[1]]$uID,
+                                variable1 = vars$Peers[[1]],
+                                variable2 = factor(vars$You[[1]],levels=c(1,2),labels=vars$labels$Response))
+
   return(list(Peers  = vars$Peers[[1]],
               You    = factor(vars$You[[1]],levels=c(1,2),labels=vars$labels$Response),
-              N      = c(sum(vars$You[[1]]==1),sum(vars$You[[1]]==2)))
-  )
+              N      = c(sum(vars$You[[1]]==1),sum(vars$You[[1]]==2)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Ross.2
@@ -4601,10 +4623,14 @@ varfun.Ross.1 <- function(vars){
 #'
 
 varfun.Ross.2 <- function(vars){
+  cleanDataFilter <- data.frame(uID = vars[[1]]$uID,
+                                variable1 = vars$Peers[[1]],
+                                variable2 = factor(vars$You[[1]],levels=c(1,2),labels=vars$labels$Response))
   return(list(Peers  = vars$Peers[[1]],
               You    = factor(vars$You[[1]],levels=c(1,2),labels=vars$labels$Response),
-              N      = c(sum(vars$You[[1]]==1),sum(vars$You[[1]]==2)))
-  )
+              N      = c(sum(vars$You[[1]]==1),sum(vars$You[[1]]==2)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Giessner.1
@@ -4634,10 +4660,16 @@ varfun.Giessner.1 <- function(vars){
   Long <- vars$Long  %>% dplyr::filter(!is.na(vars$Long[1])  & rowSums(!is.na(vars$Long[-1, ]))>1)
   Short<- vars$Short %>% dplyr::filter(!is.na(vars$Short[1]) & rowSums(!is.na(vars$Short[-1, ]))>1)
 
+  cleanDataFilter <- data.frame(uID = c(vars$Long$uID,vars$Short$uID),
+                                variable = c(rowMeans(Long[-1]),rowMeans(Short[-1])),
+                                factor =  c(rep("Long",NROW(vars$Long)),
+                                            rep("Short",NROW(vars$Short))))
+
   return(list(Long   = rowMeans(Long[-1]),
               Short  = rowMeans(Short[-1]),
-              N      = c(nrow(Long),nrow(Short)))
-  )
+              N      = c(nrow(Long),nrow(Short)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Tversky.1
@@ -4665,10 +4697,16 @@ varfun.Giessner.1 <- function(vars){
 #' @export
 #'
 varfun.Tversky.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars$Cheap$uID,vars$Expensive$uID),
+                                variable = factor(c(vars$Cheap[[1]],vars$Expensive[[1]]),levels=c(1,2),labels=vars$labels$Response),
+                                factor =  factor(c(rep(1,nrow(vars$Cheap)),rep(2,nrow(vars$Expensive))),levels=c(1,2),labels=vars$labels$Condition))
+
   return(list(Condition = factor(c(rep(1,nrow(vars$Cheap)),rep(2,nrow(vars$Expensive))),levels=c(1,2),labels=vars$labels$Condition),
               Response  = factor(c(vars$Cheap[[1]],vars$Expensive[[1]]),levels=c(1,2),labels=vars$labels$Response),
-              N         = c(nrow(vars$Cheap),nrow(vars$Expensive)))
-  )
+              N         = c(nrow(vars$Cheap),nrow(vars$Expensive)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Hauser.2
@@ -4695,10 +4733,16 @@ varfun.Hauser.2 <- function(vars){
   GreaterGood <- dplyr::filter(vars$GreaterGood,vars$GreaterGood[vars$labels$Experience[2]]!=1 & vars$GreaterGood[vars$labels$Timing[2]]>4)
   N <- c(nrow(SideEffect),nrow(GreaterGood))
 
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                variable = factor(c(SideEffect$haus3.1,GreaterGood$haus4.1),levels=c(1,2),labels=vars$labels$Response),
+                                factor =  factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition))
+
+
   return(list(Response  = factor(c(SideEffect$haus3.1,GreaterGood$haus4.1),levels=c(1,2),labels=vars$labels$Response),
               Condition = factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition),
-              N = N)
-  )
+              N = N,
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Risen.1
@@ -4719,9 +4763,16 @@ varfun.Hauser.2 <- function(vars){
 #'
 
 varfun.Risen.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars$Unprepared$uID,vars$Prepared$uID),
+                                variable = c(as.numeric(vars$Unprepared[[1]]),as.numeric(vars$Prepared[[1]])),
+                                factor   =  factor(c(rep("Unprepared",NROW(vars$Unprepared[[1]])),
+                                                   rep("Prepared",NROW(vars$Prepared[[1]])))))
+
   return(list(Unprepared  = as.numeric(vars$Unprepared[[1]]),
               Prepared    = as.numeric(vars$Prepared[[1]]),
-              N           = c(nrow(vars$Unprepared),nrow(vars$Prepared)))
+              N           = c(nrow(vars$Unprepared),nrow(vars$Prepared)),
+              cleanDataFilter = cleanDataFilter)
   )
 }
 
@@ -4747,10 +4798,17 @@ varfun.Risen.1 <- function(vars){
 #'
 
 varfun.Risen.2 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars$Unprepared$uID,vars$Prepared$uID),
+                                variable =c(vars$Unprepared$rise1.3,vars$Prepared$rise2.3),
+                                factor   =  factor(c(rep(1,nrow(vars$Unprepared)),rep(2,nrow(vars$Prepared))),levels=c(1,2),labels=vars$labels$Condition),
+                                gender = factor(c(vars$Unprepared$sex,vars$Prepared$sex)))
+
   return(list(Likelihood = c(vars$Unprepared$rise1.3,vars$Prepared$rise2.3),
               Condition  = factor(c(rep(1,nrow(vars$Unprepared)),rep(2,nrow(vars$Prepared))),levels=c(1,2),labels=vars$labels$Condition),
               Gender     = factor(c(vars$Unprepared$sex,vars$Prepared$sex)),
-              N          = c(nrow(vars$Unprepared),nrow(vars$Prepared)))
+              N          = c(nrow(vars$Unprepared),nrow(vars$Prepared)),
+              cleanDataFilter = cleanDataFilter)
   )
 }
 
@@ -4858,7 +4916,7 @@ varfun.Savani.1 <- function(vars){
                                 dplyr::select(vars$Personal,Choice=one_of(choice.Pers))
   )
   Condition    <- factor(c(rep(1,nrow(vars$Interpersonal)),rep(2,nrow(vars$Personal))),levels=c(1,2),labels=vars$labels$Condition)
-  id           <- seq_along(Condition)
+  id           <- c(vars$Interpersonal$uID,vars$Personal$uID)
 
   Response[Response>1] <- 0
   Response$Condition   <- Condition
@@ -4878,13 +4936,20 @@ varfun.Savani.1 <- function(vars){
   matchID              <- Response$uID == Importance$uID
   Response$Importance[matchID] <- scale(Importance$Importance[matchID],scale=FALSE)
 
+  cleanDataFilter <- data.frame(uID      = Response$uID,
+                                trialID  = as.numeric(Response$trialID),
+                                variable = Response$Importance,
+                                factor   = Response$Condition)
+
+
   return(list(Response   = Response$Response,
               Condition  = Response$Condition,
               Importance = Response$Importance,
               uID        = Response$uID,
               trialID    = as.numeric(Response$trialID),
               df         = tbl_df(Response),
-              N          = c(nrow(vars$Interpersonal),nrow(vars$Personal)))
+              N          = c(nrow(vars$Interpersonal),nrow(vars$Personal)),
+              cleanDataFilter = cleanDataFilter)
   )
 }
 
@@ -4909,9 +4974,16 @@ varfun.Savani.1 <- function(vars){
 #'
 
 varfun.Norenzayan.1 <- function(vars){
-  return(list(Belong  = rowMeans(vars$Belong == matrix(rep(1:2,10), nrow=nrow(vars$Belong), ncol=20, byrow = TRUE), na.rm = T),
-              Similar = rowMeans(vars$Similar == matrix(rep(1:2,10), nrow=nrow(vars$Similar), ncol=20, byrow = TRUE), na.rm = T),
-              N       = c(nrow(vars$Belong), nrow(vars$Similar))))
+
+  cleanDataFilter <- data.frame(uID      = c(vars$Belong$uID,vars$Similar$uID),
+                                variable = c(rowMeans(vars$Belong == matrix(rep(1:2,10), nrow=nrow(vars$Belong), ncol=20, byrow = TRUE), na.rm = TRUE), rowMeans(vars$Similar == matrix(rep(1:2,10), nrow=nrow(vars$Similar), ncol=20, byrow = TRUE), na.rm = TRUE)),
+                                factor   = factor(c(rep("Belong",NROW(vars$Belong)),rep("Similar",NROW(vars$Similar)))))
+
+  return(list(Belong  = rowMeans(vars$Belong == matrix(rep(1:2,10), nrow=nrow(vars$Belong), ncol=20, byrow = TRUE), na.rm = TRUE),
+              Similar = rowMeans(vars$Similar == matrix(rep(1:2,10), nrow=nrow(vars$Similar), ncol=20, byrow = TRUE), na.rm = TRUE),
+              N       = c(nrow(vars$Belong), nrow(vars$Similar)),
+         cleanDataFilter = cleanDataFilter)
+         )
 
   # return(list(Belong  = rowMeans(vars$Belong==rep(1:2,10),na.rm=TRUE),
   #             Similar = rowMeans(vars$Similar==rep(1:2,10),na.rm=TRUE),
@@ -4942,12 +5014,19 @@ varfun.Norenzayan.2 <- function(vars){
 
   N = c(length(NafterTG.Bel),length(NafterTG.Sim))
 
-  return(list(Response  = c(rowMeans(vars$Belong == matrix(rep(1:2,10), nrow = nrow(vars$Belong), ncol=20, byrow = TRUE),na.rm=T),
-                            rowMeans(vars$Similar== matrix(rep(1:2,10), nrow = nrow(vars$Belong), ncol=20, byrow = TRUE),na.rm=T)),
+  cleanDataFilter <- data.frame(uID      = c(vars$Belong$uID,vars$Similar$uID),
+                                variable = c(rowMeans(vars$Belong == matrix(rep(1:2,10), nrow=nrow(vars$Belong), ncol=20, byrow = TRUE), na.rm = TRUE), rowMeans(vars$Similar == matrix(rep(1:2,10), nrow=nrow(vars$Similar), ncol=20, byrow = TRUE), na.rm = TRUE)),
+                                factor   = factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition),
+                                order = factor(c(as.numeric(NafterTG.Bel), as.numeric(NafterTG.Sim)), levels=c(0,1), labels = vars$labels$Order))
+
+
+  return(list(Response  = c(rowMeans(vars$Belong == matrix(rep(1:2,10), nrow = nrow(vars$Belong), ncol=20, byrow = TRUE),na.rm=TRUE),
+                            rowMeans(vars$Similar== matrix(rep(1:2,10), nrow = nrow(vars$Belong), ncol=20, byrow = TRUE),na.rm=TRUE)),
               Condition = factor(c(rep(1,N[1]),rep(2,N[2])),levels=c(1,2),labels=vars$labels$Condition),
               Order     = factor(c(as.numeric(NafterTG.Bel), as.numeric(NafterTG.Sim)), levels=c(0,1), labels = vars$labels$Order),
-              uID       = 1:(sum(N,na.rm = TRUE)),
-              N         = N))
+              uID       = cleanDataFilter$uID,
+              N         = N,
+              cleanDataFilter = cleanDataFilter))
 }
 
 #' varfun.Hsee.1
@@ -4968,9 +5047,15 @@ varfun.Norenzayan.2 <- function(vars){
 #' @references Hsee, C. K. (1998). Less is better: When low-value options are valued more highly than high-value options. Journal of Behavioral Decision Making, 11, 107-121.
 #'
 varfun.Hsee.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID      = c(vars$Scarf$uID,vars$Coat$uID),
+                                variable = c(as.numeric(vars$Scarf[[1]]),as.numeric(vars$Coat[[1]])),
+                                factor   = factor(c(rep("Scarf",NROW(vars$Scarf)),rep("Coat",NROW(vars$Coat)))))
+
   return(list(Scarf  = as.numeric(vars$Scarf[[1]]),
               Coat   = as.numeric(vars$Coat[[1]]),
-              N      = c(length(as.numeric(vars$Scarf[[1]])),length(as.numeric(vars$Coat[[1]]))))
+              N      = c(length(as.numeric(vars$Scarf[[1]])),length(as.numeric(vars$Coat[[1]]))),
+              cleanDataFilter = cleanDataFilter)
   )
 }
 
