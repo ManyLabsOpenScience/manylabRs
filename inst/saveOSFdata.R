@@ -52,6 +52,7 @@ dirs[[cnt]] <- file.path(root,"!!RawData")
 cnt <- cnt+1
 dirs[[cnt]] <- file.path(root,"!!KeyTables")
 
+
 # Write the directories
 lapply(dirs, FUN = dir.create, recursive = TRUE)
 
@@ -69,10 +70,13 @@ ML2_S2 <- rio::import("~/Dropbox/Manylabs2/Raw Data after Cleaning/Package_data/
 export(ML2_S1,file.path(dirs[[cnt-1]],"ML2_Slate1.csv"))
 export(ML2_S2,file.path(dirs[[cnt-1]],"ML2_Slate2.csv"))
 
+ori <- get.oriESCI()
+
+export(ori$oriFULL,file.path(dirs[[cnt-1]],"ML2_OriginalEffects.csv"))
+export(ori$masterKey,file.path(dirs[[cnt-1]],"ML2_Keytable.csv"))
 
 
 
-#
 # for(s in studs){
 #
 #   # Get the correct slate according to info in ML2.key['study.slate']
