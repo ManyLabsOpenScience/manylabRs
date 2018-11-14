@@ -542,6 +542,10 @@ get.oriESCI <- function(CL=.95){
     n1  <- ML2.ori$orig.stat.n1[[s]]
     n2  <- ML2.ori$orig.stat.n2[[s]]
     esType <- ML2.ori$orig.stat.type[[s]]
+
+    # var.lor <- ifelse(grepl("OR",esType),
+    #                   sum(1/(table()), na.rm = TRUE),
+    #                   NA)
     var.lor <- NA
 
     if(study.name=="Tversky"){
@@ -650,20 +654,20 @@ get.oriESCI <- function(CL=.95){
       if(stat.test$method=="Fisher r-to-Z transformed test for difference between 2 independent correlations"){
         ID <- grep("d",colnames(ESCI))[1]
         if(!is.na(ID)%00%NA){ESCI[,ID:NCOL(ESCI)] <- NA}
-        ESCI$bootR1    <- test$fZ.bootR1
-        ESCI$bootR2    <- test$fZ.bootR2
-        ESCI$bootCI.l  <- test$fZ.bootcCI.l
-        ESCI$bootCI.u  <- test$fZ.bootcCI.u
-        ESCI$r         <- test$fZ.r
-        ESCI$l.r       <- test$fZ.l.r
-        ESCI$u.r       <- test$fZ.u.r
+        # ESCI$bootR1    <- test$fZ.bootR1
+        # ESCI$bootR2    <- test$fZ.bootR2
+        # ESCI$bootCI.l  <- test$fZ.bootcCI.l
+        # ESCI$bootCI.u  <- test$fZ.bootcCI.u
+        # ESCI$r         <- ESCI$r
+        # ESCI$l.r       <- ESCI$l.r
+        # ESCI$u.r       <- test$fZ.u.r
       }
-      ESCI$ncp       <- test$fZ.statistic
-      ESCI$ncp.lo    <- test$fZ.ncp.lo
-      ESCI$ncp.hi    <- test$fZ.ncp.hi
-      ESCI$cohensQ   <- test$fZ.cohensQ
-      ESCI$cohensQ.l <- test$fZ.cohensQ.l
-      ESCI$cohensQ.u <- test$fZ.cohensQ.u
+      ESCI$ncp       <- test$statistic
+      ESCI$ncp.lo    <- test$ncp.lo
+      ESCI$ncp.hi    <- test$ncp.hi
+      ESCI$cohensQ   <- tmp$effect.size
+      ESCI$cohensQ.l <- tmp$effect.size.ci[[1]]
+      ESCI$cohensQ.u <- tmp$effect.size.ci[[2]]
     }
 
 
@@ -5077,10 +5081,15 @@ varfun.Hsee.1 <- function(vars){
 #' Baby harms adult scenario; gray2.2=responsibility (baby);  gray2.4=pain (adult)
 #'
 varfun.Gray.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID      = c(vars$adultHbaby$uID,vars$babyHadult$uID),
+                                variable = c(as.numeric(vars$adultHbaby[[1]]),as.numeric(vars$babyHadult[[1]])),
+                                factor   = factor(c(rep("Adult harms Baby",length(as.numeric(vars$adultHbaby[[1]]))), rep("Baby harms Adult",length(as.numeric(vars$babyHadult[[1]]))))))
+
   return(list(adultHbaby = as.numeric(vars$adultHbaby[[1]]),
               babyHadult = as.numeric(vars$babyHadult[[1]]),
-              N     = c(length(as.numeric(vars$adultHbaby[[1]])),length(as.numeric(vars$babyHadult[[1]]))))
-  )
+              N     = c(length(as.numeric(vars$adultHbaby[[1]])),length(as.numeric(vars$babyHadult[[1]]))),
+              cleanDataFilter = cleanDataFilter))
 }
 
 #' varfun.Gray.2
@@ -5101,9 +5110,15 @@ varfun.Gray.1 <- function(vars){
 #'
 
 varfun.Gray.2 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID      = c(vars$adultHbaby$uID,vars$babyHadult$uID),
+                                variable = c(as.numeric(vars$adultHbaby[[1]]),as.numeric(vars$babyHadult[[1]])),
+                                factor   = factor(c(rep("Adult harms Baby",length(as.numeric(vars$adultHbaby[[1]]))), rep("Baby harms Adult",length(as.numeric(vars$babyHadult[[1]]))))))
+
   return(list(adultHbaby = as.numeric(vars$adultHbaby[[1]]),
               babyHadult = as.numeric(vars$babyHadult[[1]]),
-              N     = c(length(as.numeric(vars$adultHbaby[[1]])),length(as.numeric(vars$babyHadult[[1]])))))
+              N     = c(length(as.numeric(vars$adultHbaby[[1]])),length(as.numeric(vars$babyHadult[[1]]))),
+         cleanDataFilter = cleanDataFilter))
 }
 
 #' varfun.Zhong.1
@@ -5146,10 +5161,15 @@ varfun.Zhong.1 <- function(vars){
   idClean <- c(2,3,7,8,10)+1
   idOther <- c(1,4,5,6,9)+1
 
+  cleanDataFilter <- data.frame(uID      = c(vars$Ethical$uID,vars$Unethical$uID),
+                                variable = c(rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE), rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE)),
+                                factor   = factor(c(rep("Ethical",length(rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE))), rep("Unethical",length(rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE))))))
+
+
   return(list(Ethical   = rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE),
               Unethical = rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE),
-              N         = c(length(rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE)), length(rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE))))
-  )
+              N         = c(length(rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE)), length(rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE))),
+              cleanDataFilter = cleanDataFilter))
 }
 
 #' varfun.Zhong.2
@@ -5195,30 +5215,42 @@ varfun.Zhong.2 <- function(vars){
   idClean <- c(2,3,7,8,10)+1
   idOther <- c(1,4,5,6,9)+1
 
-  return(list(Response  = c(rowMeans(vars$Ethical[,idClean]),
+  Response  = c(rowMeans(vars$Ethical[,idClean]),
                             rowMeans(vars$Ethical[,idOther]),
                             rowMeans(vars$Unethical[,idClean]),
-                            rowMeans(vars$Unethical[,idOther])
-  ),
+                            rowMeans(vars$Unethical[,idOther]))
+
   Condition = factor(c(rep(1,times=nrow(vars$Ethical)),
                        rep(1,times=nrow(vars$Ethical)),
                        rep(2,times=nrow(vars$Unethical)),
-                       rep(2,times=nrow(vars$Unethical))
-  ), levels=c(1,2),labels=vars$labels$Condition
-  ),
+                       rep(2,times=nrow(vars$Unethical))),
+                     levels=c(1,2),labels=vars$labels$Condition)
+
   Product   = factor(c(rep(1,times=nrow(vars$Ethical)),
                        rep(2,times=nrow(vars$Ethical)),
                        rep(1,times=nrow(vars$Unethical)),
-                       rep(2,times=nrow(vars$Unethical))
-  ), levels=c(1,2),labels=vars$labels$Product
-  ),
+                       rep(2,times=nrow(vars$Unethical))),
+                     levels=c(1,2),labels=vars$labels$Product)
+
   uID       = c(seq_along(vars$Ethical[[1]]),
                 seq_along(vars$Ethical[[1]]),
                 max(seq_along(vars$Ethical[[1]])) + seq_along(vars$Unethical[[1]]),
-                max(seq_along(vars$Ethical[[1]])) + seq_along(vars$Unethical[[1]])
-  ),
-  N         = c(nrow(vars$Ethical),nrow(vars$Unethical)))
-  )
+                max(seq_along(vars$Ethical[[1]])) + seq_along(vars$Unethical[[1]]))
+
+  N         = c(nrow(vars$Ethical),nrow(vars$Unethical))
+
+  cleanDataFilter <- data.frame(uID = uID,
+                                Response = Response,
+                                Condition = Condition,
+                                Product = Product)
+
+  return(list(Response = Response,
+              Condition = Condition,
+              Product = Product,
+              uID = uID,
+              N = N,
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Zhong.3
@@ -5260,11 +5292,16 @@ varfun.Zhong.3 <- function(vars){
   idClean <- c(2,3,7,8,10)+1
   idOther <- c(1,4,5,6,9)+1
 
+  cleanDataFilter <- data.frame(uID      = c(vars$Ethical$uID,vars$Unethical$uID),
+                                variable = c(rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE), rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE)),
+                                factor   = factor(c(rep("Ethical",length(rowMeans(vars$Ethical[ ,idClean],na.rm = TRUE))), rep("Unethical",length(rowMeans(vars$Unethical[ ,idClean], na.rm = TRUE))))))
+
+
   return(list(Ethical   = rowMeans(vars$Ethical[ ,idOther],na.rm = TRUE),
               Unethical = rowMeans(vars$Unethical[ ,idOther], na.rm = TRUE),
               N         = c(length(rowMeans(vars$Ethical[ ,idOther],na.rm = TRUE)),
-                            length(rowMeans(vars$Unethical[ ,idOther], na.rm = TRUE))))
-  )
+                            length(rowMeans(vars$Unethical[ ,idOther], na.rm = TRUE))),
+              cleanDataFilter = cleanDataFilter))
 }
 
 #' varfun.Schwarz.1
@@ -5285,10 +5322,18 @@ varfun.Zhong.3 <- function(vars){
 #' @references Schwarz, N., Strack, F., & Mai, H. P. (1991). Assimilation and contrast effects in part-whole question sequences: A conversational logic analysis. \strong{Public Opinion Quarterly, 55}, 3-23.
 #'
 varfun.Schwarz.1 <- function(vars){
+
+  cleanDataFilter <- data.frame(uID = c(vars[[1]]$uID,vars[[2]]$uID),
+                                variable1 = unlist(c(vars$SpecificFirst[,1],vars$GlobalFirst[,1])),
+                                variable2 = unlist(c(vars$SpecificFirst[,2],vars$GlobalFirst[,2])),
+                                factor =  c(rep("SpecificFirst",nrow(vars$SpecificFirst)),
+                                            rep("GlobalFirst",nrow(vars$GlobalFirst))))
+
   return(list(r1 = cbind(vars$SpecificFirst[,1],vars$SpecificFirst[,2]),
               r2 = cbind(vars$GlobalFirst[,1],vars$GlobalFirst[,2]),
-              N  = c(nrow(vars$SpecificFirst),nrow(vars$GlobalFirst)))
-  )
+              N  = c(nrow(vars$SpecificFirst),nrow(vars$GlobalFirst)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Schwarz.2
@@ -5310,14 +5355,22 @@ varfun.Schwarz.1 <- function(vars){
 #' @references Schwarz, N., Strack, F., & Mai, H. P. (1991). Assimilation and contrast effects in part-whole question sequences: A conversational logic analysis. \strong{Public Opinion Quarterly, 55}, 3-23.
 #'
 varfun.Schwarz.2 <- function(vars){
+
   id <- sapply(seq_along(vars$RawDataFilter[[1]]$.id), function(i) unlist(strsplit(x = vars$RawDataFilter[[1]]$StudyOrderN[i], split = "[|]"))[[1]] == "Schwarz")
-  r1 <- na.exclude(cbind(vars$SpecificFirst[id,1], vars$SpecificFirst[id,2]))
-  r2 <- na.exclude(cbind(vars$GlobalFirst[id,1], vars$GlobalFirst[id,2]))
+  r1 <- na.exclude(cbind(vars$SpecificFirst[id,1], vars$SpecificFirst[id,2],vars$SpecificFirst[id,3]))
+  r2 <- na.exclude(cbind(vars$GlobalFirst[id,1], vars$GlobalFirst[id,2], vars$GlobalFirst[id,3]))
+
+  cleanDataFilter <- data.frame(uID = c(r1[,3],r2[,3]),
+                                variable1 = unlist(c(r1[,1],r2[,1])),
+                                variable2 = unlist(c(r1[,2],r2[,2])),
+                                factor =  c(rep("SpecificFirst",nrow(r1)),
+                                            rep("GlobalFirst",nrow(r2))))
+
   return(list(r1 = r1,
               r2 = r2,
-              N  = c(nrow(r1),nrow(r2))
-  )
-  )
+              N  = c(nrow(r1),nrow(r2)),
+              cleanDataFilter = cleanDataFilter))
+
 }
 
 #' varfun.Shafir.1
@@ -5346,13 +5399,20 @@ varfun.Shafir.1 <- function(vars){
   Response = factor(c(vars$Award$shaf1.1,vars$Deny$shaf2.1), levels = c(1,2),labels = c("parent A", "Parent B"))
   N        = c(length(na.exclude(vars$Award$shaf1.1)), length(na.exclude(vars$Deny$shaf2.1)))
 
+  cleanDataFilter = data.frame(uID =c(vars[[1]]$uID,vars[[2]]$uID),
+                               variable1 = Response,
+                               variable2 = factor(c(rep("Award",N[1]), rep("Deny",N[2]))),
+                               parentB = rep(sum(c(sum(vars$Award$shaf1.1 == 2, na.rm = TRUE) / N[1],
+                                                 sum(vars$Deny$shaf2.1  == 2, na.rm = TRUE) / N[2]),
+                                               na.rm = TRUE)/2,NROW(Response)))
+
   return(list(Response  = Response,
               Condition = factor(c(rep("Award",N[1]), rep("Deny",N[2]))),
               ParentB   = sum(c(sum(vars$Award$shaf1.1 == 2, na.rm = TRUE) / N[1],
                                 sum(vars$Deny$shaf2.1  == 2, na.rm = TRUE) / N[2]),
                               na.rm = TRUE)/2,
-              N         = N #c(nrow(vars$Award), nrow(vars$Deny))
-  )
+              N         = N, #c(nrow(vars$Award), nrow(vars$Deny))
+              cleanDataFilter = cleanDataFilter)
   )
   # prop.test(x = ParentB, n=sum(N), p = .5, conf.level=stat.params[[1]], alternative = stat.params[[4]])
   # prop.test(x = .6, n=170, p = .5)
@@ -5381,11 +5441,16 @@ varfun.Zaval.1 <- function(vars){
   idC <- vars$Cold$zav.include.strict&(vars$Cold$zav.condition==1)
   idH <- vars$Heat$zav.include.strict&(vars$Heat$zav.condition==2)
 
+  cleanDataFilter = data.frame(uID =c(vars$Cold$uID[idC],vars$Heat$uID[idH]),
+                               variable =c(as.numeric(unlist(vars$Cold[idC,1])),as.numeric(unlist(vars$Heat[idH,1]))),
+                               factor = factor(c(rep("Cold",sum(idC)), rep("Heat",sum(idH))))
+                               )
+
   return(list(Cold = as.numeric(unlist(vars$Cold[idC,1])),
               Heat = as.numeric(unlist(vars$Heat[idH,1])),
-              N    = c(length(as.numeric(unlist(vars$Cold[idC,1]))),length(as.numeric(unlist(vars$Heat[idH,1]))))
-  )
-  )
+              N    = c(length(as.numeric(unlist(vars$Cold[idC,1]))),length(as.numeric(unlist(vars$Heat[idH,1])))),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 
@@ -5407,10 +5472,17 @@ varfun.Zaval.1 <- function(vars){
 #' @references Knobe, J. (2003). Intentional action and side effects in ordinary language. Analysis, 63, 190-193.
 #'
 varfun.Knobe.1 <- function(vars){
-  return(list(Help = unlist(vars$Help),
-              Harm = unlist(vars$Harm),
-              N    = c(length(unlist(vars$Help)), length(unlist(vars$Harm))))
-  )
+
+  cleanDataFilter = data.frame(uID =c(vars$Help$uID,vars$Harm$uID),
+                               variable =c(unlist(vars$Help[,1]),unlist(vars$Harm[,1])),
+                               factor = factor(c(rep("Help",length(unlist(vars$Help[,1]))), rep("Harm",length(unlist(vars$Harm[,1])))))
+                               )
+
+  return(list(Help = unlist(vars$Help[,1]),
+              Harm = unlist(vars$Harm[,1]),
+              N    = c(length(unlist(vars$Help[,1])), length(unlist(vars$Harm[,1]))),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Knobe.2
@@ -5432,10 +5504,17 @@ varfun.Knobe.1 <- function(vars){
 #'
 
 varfun.Knobe.2 <- function(vars){
-  return(list(Praise = unlist(vars$Praise),
-              Blame  = unlist(vars$Blame),
-              N    = c(length(unlist(vars$Praise)), length(unlist(vars$Blame))))
+
+  cleanDataFilter = data.frame(uID =c(vars$Praise$uID,vars$Blame$uID),
+                               variable =c(unlist(vars$Praise[,1]),unlist(vars$Blame[,1])),
+                               factor = factor(c(rep("Praise",length(unlist(vars$Praise[,1]))), rep("Blame",length(unlist(vars$Blame[,1])))))
   )
+
+  return(list(Praise = unlist(vars$Praise[,1]),
+              Blame  = unlist(vars$Blame[,1]),
+              N    = c(length(unlist(vars$Praise[,1])), length(unlist(vars$Blame[,1]))),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Gati.1
@@ -5463,10 +5542,10 @@ varfun.Gati.1 <- function(vars){
   dfA     <- vars[[1]]
   dfB     <- vars[[2]]
 
-  dfA$uID <- 1:nrow(dfA)
+  #dfA$uID <- 1:nrow(dfA)
   dfA$CounterBalance <- 1
 
-  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  #dfB$uID <- 1:nrow(dfB)+nrow(dfA)
   dfB$CounterBalance <- 2
 
   dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
@@ -5495,12 +5574,15 @@ varfun.Gati.1 <- function(vars){
 
   #CounterBalance = df$CounterBalance,
 
+  cleanDataFilter = df
+
   return(list(DV         = df$DV,
               Condition  = df$Condition,
               uID        = df$uID,
               itemID     = df$itemID,
-              N          = c(nrow(vars[[1]]),nrow(vars[[2]])))
-  )
+              N          = c(nrow(vars[[1]]),nrow(vars[[2]])),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Gati.2
@@ -5517,7 +5599,6 @@ varfun.Gati.1 <- function(vars){
 #'
 
 varfun.Gati.2 <- function(vars){
-  #    require(dplyr)
 
   same <- any(grepl("(gati(1|2)(s))+",colnames(vars[[1]])))
 
@@ -5529,10 +5610,10 @@ varfun.Gati.2 <- function(vars){
   dfA     <- vars[[1]]
   dfB     <- vars[[2]]
 
-  dfA$uID <- 1:nrow(dfA)
+  #dfA$uID <- 1:nrow(dfA)
   dfA$CounterBalance <- 1
 
-  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  #dfB$uID <- 1:nrow(dfB)+nrow(dfA)
   dfB$CounterBalance <- 2
 
   dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
@@ -5557,41 +5638,29 @@ varfun.Gati.2 <- function(vars){
   }
   df$CounterBalance  <- factor(df$CounterBalance,levels=c(1,2),labels=c('CBA','CBB'))
 
-  #df <- df[order(df$uID,df$itemID), ]
 
-  # Suibject based dataset
-  df.subj <- summarize(group_by(df, uID, Condition, CounterBalance),
+  # Subject based dataset
+  df.subj <- dplyr::summarize(dplyr::group_by(df, uID, Condition, CounterBalance),
                        stimDVm = mean(DV,na.rm = TRUE),
                        # study.order = paste0(unique(study.order), collapse = "|"),
                        # Country = paste0(unique(Country), collapse = "|")
   )
 
-  # df.subj1 <- summarize(group_by(df, uID, Condition, CounterBalance), stimDVsd = sd(DV, na.rm = TRUE))
-  # df.subj2 <- summarize(group_by(df, uID, Condition, CounterBalance), Ncases = n())
-
   df.subj.wide  <- tidyr::spread(df.subj, key = Condition, value = stimDVm)
-  # df.subj.wide1 <- tidyr::spread(df.subj1, key = Condition, value = stimDVsd)
-  # df.subj.wide2 <- tidyr::spread(df.subj2, key = Condition, value = Ncases)
-  #
-  # df.subj.wide$Prominent1stSD     <- df.subj.wide1$Prominent1st
-  # df.subj.wide$Prominent2ndSD     <- df.subj.wide1$Prominent2nd
-  # df.subj.wide$Prominent1stNcases <- df.subj.wide2$Prominent1st
-  # df.subj.wide$Prominent2ndNcases <- df.subj.wide2$Prominent2nd
-  #
-  # df.subj.wide$Asymmetry  = df.subj.wide$Prominent1st-df.subj.wide$Prominent2nd
 
   if(same){
-    Asymmetry <-  df.subj.wide$Prominent2nd-df.subj.wide$Prominent1st
+    df.subj.wide$Asymmetry <-  df.subj.wide$Prominent2nd-df.subj.wide$Prominent1st
   } else {
-    Asymmetry <- df.subj.wide$Prominent1st-df.subj.wide$Prominent2nd
+    df.subj.wide$Asymmetry <- df.subj.wide$Prominent1st-df.subj.wide$Prominent2nd
   }
 
+  cleanDataFilter = df.subj.wide
 
-  return(list(Asymmetry  = Asymmetry,
+  return(list(Asymmetry  = df.subj.wide$Asymmetry,
               CompareTo  = 0,
-              N          = c(nrow(df.subj.wide),NULL)
-  )
-  )
+              N          = c(nrow(df.subj.wide),NULL),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 #' varfun.Gati.3
@@ -5620,10 +5689,10 @@ varfun.Gati.3 <- function(vars){
   dfA     <- vars[[1]]
   dfB     <- vars[[2]]
 
-  dfA$uID <- 1:nrow(dfA)
+  #dfA$uID <- 1:nrow(dfA)
   dfA$CounterBalance <- 1
 
-  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  #dfB$uID <- 1:nrow(dfB)+nrow(dfA)
   dfB$CounterBalance <- 2
 
   dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
@@ -5653,15 +5722,15 @@ varfun.Gati.3 <- function(vars){
   # Item based dataset
   df.stim <- summarize(group_by(df, itemID, Condition), # interaction(Condition, CounterBalance)),
                        stimDV = mean(DV,na.rm = TRUE)
-                       #  stimSD = sd(DV, na.rm = TRUE),
-                       #  N = n()
-  )
+                       )
+
+  cleanDataFilter <- df.stim
 
   return(list(DV        = df.stim$stimDV,
               Condition = df.stim$Condition,
-              N         = c( sum(df.stim$Condition%in%"Prominent1st"), NULL)
-  )
-  )
+              N         = c( sum(df.stim$Condition%in%"Prominent1st"), NULL),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 
@@ -5692,10 +5761,10 @@ varfun.Gati.4 <- function(vars){
   dfA     <- vars[[1]]
   dfB     <- vars[[2]]
 
-  dfA$uID <- 1:nrow(dfA)
+  #dfA$uID <- 1:nrow(dfA)
   dfA$CounterBalance <- 1
 
-  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  #dfB$uID <- 1:nrow(dfB)+nrow(dfA)
   dfB$CounterBalance <- 2
 
   dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
@@ -5739,26 +5808,25 @@ varfun.Gati.4 <- function(vars){
   Order.n <- c(as.numeric(TGafterN.cbA), as.numeric(TGafterN.cbB))
 
   if(same){
-    Asymmetry <-  df.subj.wide$Prominent2nd-df.subj.wide$Prominent1st
+    df.subj.wide$Asymmetry <-  df.subj.wide$Prominent2nd-df.subj.wide$Prominent1st
   } else {
-    Asymmetry <- df.subj.wide$Prominent1st-df.subj.wide$Prominent2nd
+    df.subj.wide$Asymmetry <- df.subj.wide$Prominent1st-df.subj.wide$Prominent2nd
   }
 
-  return(list(Asymmetry  = Asymmetry,
+  df.subj.wide$Order <- factor(Order.n, levels=c(0,1), labels = vars$labels$Order)
+  cleanDataFilter <- df.subj.wide
+
+  return(list(Asymmetry  = df.subj.wide$Asymmetry,
               Order      = factor(Order.n, levels=c(0,1), labels = vars$labels$Order),
-              N          = c(sum(Order.n==0,na.rm = TRUE),sum(Order.n==1,na.rm = TRUE))
-  )
-  )
-
-
-  # dfA$asym <- rowMeans(dplyr::select(dfA,which(as.numeric(gsub("(gati(1|2)(s|d)[.])","",colnames(dfA)))%in%CounterBalanceA$P2nd)),na.rm=TRUE)-rowMeans(select(dfA,which(as.numeric(gsub("(gati(1|2)(s|d)[.])","",colnames(dfA)))%in%CounterBalanceA$P1st)),na.rm=TRUE)
-  #
-  # dfB$asym <- rowMeans(dplyr::select(dfB,which(as.numeric(gsub("(gati(1|2)(s|d)[.])","",colnames(dfB)))%in%CounterBalanceB$P2nd)),na.rm=TRUE)-rowMeans(select(dfB,which(as.numeric(gsub("(gati(1|2)(s|d)[.])","",colnames(dfB)))%in%CounterBalanceB$P1st)),na.rm=TRUE)
+              N          = c(sum(Order.n==0,na.rm = TRUE),sum(Order.n==1,na.rm = TRUE)),
+              cleanDataFilter = cleanDataFilter)
+         )
 
   return(list(Asymmetry  = c(dfA$asym,dfB$asym),
               Order      = factor(c(as.numeric(TGafterN.cbA), as.numeric(TGafterN.cbB)), levels=c(0,1), labels = vars$labels$Order),
-              N          = c(length(dfA$asym),length(dfB$asym)))
-  )
+              N          = c(length(dfA$asym),length(dfB$asym)),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 
@@ -5786,10 +5854,10 @@ varfun.Gati.5 <- function(vars){
   dfA     <- vars[[1]]
   dfB     <- vars[[2]]
 
-  dfA$uID <- 1:nrow(dfA)
+  #dfA$uID <- 1:nrow(dfA)
   dfA$CounterBalance <- 1
 
-  dfB$uID <- 1:nrow(dfB)+nrow(dfA)
+  #dfB$uID <- 1:nrow(dfB)+nrow(dfA)
   dfB$CounterBalance <- 2
 
   dfA <- reshape2::melt(dfA,id=c('uID','CounterBalance'),variable.name='itemID',value.name='DV',factorsAsStrings = FALSE)
@@ -5823,10 +5891,13 @@ varfun.Gati.5 <- function(vars){
                        N = n()
   )
 
+  cleanDataFilter <- df.stim
+
   return(list(DV        = df.stim$stimDV,
               Condition = df.stim$Condition,
-              N         = c( sum(df.stim$Condition%in%"Prominent1st"), NULL))
-  )
+              N         = c( sum(df.stim$Condition%in%"Prominent1st"), NULL),
+              cleanDataFilter = cleanDataFilter)
+         )
 }
 
 
