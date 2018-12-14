@@ -1,5 +1,5 @@
 
-#**IMPORTANT NOTE:**
+# **IMPORTANT NOTE:**
 
 All **Manylabs 2** materials (data, output, scipts, etc.) are in the ManyLabs2 repository https://github.com/ManyLabsOpenScience/ManyLabs2 or on the OSF page: https://osf.io/ux3eh/
 
