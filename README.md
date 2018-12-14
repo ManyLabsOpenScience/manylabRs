@@ -1,4 +1,25 @@
 
+#**IMPORTANT NOTE:**
+
+All **Manylabs 2** materials (data, output, scipts, etc.) are in the ManyLabs2 repository https://github.com/ManyLabsOpenScience/ManyLabs2 or on the OSF page: https://osf.io/ux3eh/
+
+
+The manylabRs package currently does not function as welll as we would like, so currently we advise to use the sourceable file in the **ManyLabs 2** repository, you might also need package `invctr`.
+
+
+```{r, eval = FALSE}
+library(devtools)
+devtools::source_url("https://raw.githubusercontent.com/ManyLabsOpenScience/manylabRs/master/R/manylabRs_SOURCE.R")
+
+# NOTE: Don't run init() if you do not want unsupervised loading, and possibly installing of packages we need to run ML2 scripts!!
+# init()
+
+devtools::source_url("https://raw.githubusercontent.com/FredHasselman/invctr/master/R/invictor.R")
+```
+
+
+-------
+
 [![Travis-CI Build Status](https://travis-ci.org/ManyLabsOpenScience/manylabRs.svg?branch=master)](https://travis-ci.org/ManyLabsOpenScience/manylabRs)
 
 
