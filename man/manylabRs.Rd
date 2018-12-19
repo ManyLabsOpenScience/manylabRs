@@ -4,12 +4,8 @@
 \name{manylabRs}
 \alias{manylabRs}
 \alias{manylabRs-package}
-\alias{manylabRs}
-\alias{manylabRs-package}
 \title{manylabRs.}
 \description{
-manylabRs.
-
 Code and data from the ManyLabs projects.
 }
 \details{
